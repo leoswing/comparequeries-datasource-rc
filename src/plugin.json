@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "datasource",
+  "name": "CompareQueries",
+  "id": "autohome-comparequeries-datasource",
+  "metrics": true,
+  "annotations": false,
+  "queryOptions": {
+    "minInterval": true
+  },
+  "info": {
+    "description": "Grafana plugin for compare queries",
+    "author": {
+      "name": "Mit"
+    },
+    "keywords": ["datasource"],
+    "logos": {
+      "small": "img/logo.png",
+      "large": "img/logo.png"
+    },
+    "links": [],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=10.3.3",
+    "plugins": []
+  }
+}
