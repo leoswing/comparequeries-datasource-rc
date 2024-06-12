@@ -1,6 +1,6 @@
 import React, { ChangeEvent, useEffect, useState, useCallback } from 'react';
 import _ from 'lodash';
-import { InlineField, Stack, InlineFormLabel, InlineFieldRow, HorizontalGroup, Switch, InlineSwitch } from '@grafana/ui';
+import { InlineField, Stack, InlineFormLabel, InlineFieldRow, HorizontalGroup, InlineSwitch } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from '../datasource';
 import { MyDataSourceOptions, MyQuery } from '../types';
@@ -70,9 +70,14 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
   };
 
   const addTimeShifts = () => {
-    console.log('>>> addTimeShifts trigger >>>');
     let id = getTimeShiftId();
-    target.timeShifts.push({ id: id });
+    setTarget({
+      ...target,
+      timeShifts: [
+        ...target.timeShifts,
+        {id: id},
+      ]
+    });
   };
 
   const removeTimeShift = (timeShift: number) => {
