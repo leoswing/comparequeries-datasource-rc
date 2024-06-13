@@ -44,7 +44,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
       [sourceKey]: value,
     });
 
-    onChange({ ...query, target });
+    onChange({ ...query, ...target });
 
     // executes the query
     onRunQuery();
@@ -75,7 +75,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
 
     console.log('>>>> origin query', query);
 
-    onChange({ ...query, target });
+    onChange({ ...query, ...target });
 
     // executes the query
     onRunQuery();
