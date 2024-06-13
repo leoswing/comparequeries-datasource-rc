@@ -9,18 +9,18 @@ enum AliasTypes {
 
 export interface MyQuery extends DataQuery {
   queryText?: string;
-  constant: number;
   errors: any;
   query: any;
   target: any;
   aliasTypes: AliasTypes;
   units?: string[];
+  process: boolean;
 }
 
 export const DEFAULT_QUERY: Partial<MyQuery> = {
-  constant: 6.5,
   aliasTypes: AliasTypes.suffix,
   units: ['y', 'M', 'w', 'd', 'h', 'm', 's'],
+  process: true,
 };
 
 export interface DataPoint {
