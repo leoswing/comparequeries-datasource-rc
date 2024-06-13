@@ -74,7 +74,6 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     onTimeShiftStateChange(event, sourceLine, sourceKey);
 
     console.log('>>>> origin query', query);
-    console.log('>>> current target', target, event.target.value);
 
     onChange({ ...query, target });
 

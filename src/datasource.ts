@@ -29,6 +29,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     this.meta = instanceSettings.meta;
     this.datasourceSrv = getDataSourceSrv();
     this.templateSrv = getTemplateSrv();
+    console.log('>>> datasource 内部 this.meta', this.meta);
   }
 
   getDefaultQuery(_: CoreApp): Partial<MyQuery> {
@@ -36,7 +37,6 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   filterQuery(query: MyQuery): boolean {
-    console.log('>>>> trigger filterQuery');
     // if no query has been provided, prevent the query from being executed
     return !!query.target;
   }
@@ -48,7 +48,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
       console.log('>>> query options', options);
 
-      let sets = _.groupBy(options.targets, function (ds: any) {
+      let sets = _.groupBy(options.targets, (ds: any) => {
         console.log('>>>> sets ds', ds);
         // Trying to maintain compatibility with grafana lower then 8.3.x
         if (ds.datasource.uid === undefined) {
@@ -58,13 +58,16 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         return ds.datasource.uid;
       });
 
-      let querys = _.groupBy(options.targets, 'refId');  
+      let querys = _.groupBy(options.targets, 'refId');
       let promises: any[] = [];
 
-      _.forEach(sets, function (targets, dsName) {      
+      _.forEach(sets, (targets, dsName) => {  
         let opt = _.cloneDeep(options);
+
+        console.log('>>> dsName', dsName);
   
         let promise = _this.datasourceSrv.get(dsName).then((ds: any) => {
+          console.log('>>> current ds', ds.meta, _this.meta);
           if (ds.meta.id === _this.meta.id) {
             console.log('>>>> equals meta id');
             return _this._compareQuery(options, targets, querys, _this);
@@ -78,22 +81,22 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         promises.push(promise);
       });
 
-      let result = Promise.all(promises).then(function (results: any) {
+      let result = Promise.all(promises).then((results: any) => {
         return {
           data: _.flatten(
             _.filter(
-              _.map(results, function (result) {
+              _.map(results, (result) => {
                 let data = result.data;
 
                 if (data) {
-                  data = _.filter(result.data, function(datum) {
+                  data = _.filter(result.data, (datum) => {
                     return datum.hide !== true;
                   });
                 }
 
                 return data;
               }),
-              function (result) {
+              (result) => {
                 return result !== undefined && result !== null;
               }
             )
@@ -106,11 +109,11 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   
     _compareQuery(options: Record<string, any>, targets: any, querys: any, _this: any) {
       let comparePromises: any[] = [];
-      console.log('_compareQuery targets', targets)
-      _.forEach(targets, function(target) {
+      console.log('>>> _compareQuery targets >>> ', targets, querys);
+      _.forEach(targets, (target) => {
         let query = target.query;
 
-        if (query === null || query === '' || querys[query] === null || !query || !querys[query]) {
+        if (query === null || query === '' || querys[query] === null) {
           return;
         }
 
@@ -121,7 +124,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           let compareDsName = queryObj.datasource;
 
           if (target.timeShifts && target.timeShifts.length > 0) {
-            _.forEach(target.timeShifts, function(timeShift) {
+            _.forEach(target.timeShifts, (timeShift) => {
               let timeShiftValue: any;
               let timeShiftAlias: any;
               let aliasType = timeShift.aliasType || 'suffix';
@@ -129,13 +132,14 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   
               let comparePromise = _this.datasourceSrv
                 .get(compareDsName)
-                .then(function (compareDs: any) {
+                .then((compareDs: any) => {
+                  // TODO: 暂时不相等配置，
                   if (compareDs.meta.id === _this.meta.id) {
                     return { data: [] };
                   }
 
-                  timeShiftValue = _this.templateSrv.replace(timeShift.value, options.scopedVars);
-                  timeShiftAlias = _this.templateSrv.replace(timeShift.alias, options.scopedVars) || timeShiftValue;
+                  timeShiftValue = getTemplateSrv().replace(timeShift.value, options.scopedVars);
+                  timeShiftAlias = getTemplateSrv().replace(timeShift.alias, options.scopedVars) || timeShiftValue;
   
                   if (timeShiftValue === null || timeShiftValue === '' || typeof timeShiftValue === 'undefined') {
                     return { data: [] };
@@ -157,9 +161,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
                   let compareResult = compareDs.query(compareOptions);
                   return typeof compareResult.toPromise === 'function' ? compareResult.toPromise() : compareResult;
                 })
-                .then(function (compareResult: any) {
+                .then((compareResult: any) => {
                   let data = compareResult.data;
-                  data.forEach(function (line: any) {
+                  data.forEach((line: any) => {
                     if (line.target) {
                       // if old time series format
                       line.target = _this.generalAlias(line.target, timeShiftAlias, aliasType, delimiter);
@@ -168,7 +172,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
                         (line.title = _this.generalAlias(line.title, timeShiftAlias, aliasType, delimiter));
                     } else if (line.fields) {
                       //else if new data frames format with multiple series
-                      line.fields.forEach(function (field: Record<string, any>) {
+                      line.fields.forEach((field: Record<string, any>) => {
                         if (field.name) {
                           field.name = _this.generalAlias(field.name, timeShiftAlias, aliasType, delimiter);
                         }
@@ -206,14 +210,14 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   
                       if (line.type === 'table') {
                         if (line.rows) {
-                          line.rows.forEach(function (row: any[]) {
+                          line.rows.forEach((row: any[]) => {
                             row[0] = row[0] + timeShift_ms;
                           });
                         }
                       } else {
                         if (line.datapoints) {
                           // if old time series format
-                          line.datapoints.forEach(function (datapoint: any[]) {
+                          line.datapoints.forEach((datapoint: any[]) => {
                             datapoint[1] = datapoint[1] + timeShift_ms;
                           });
                         } else if (line.fields && line.fields.length > 0) {
@@ -251,22 +255,22 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         }
       });
   
-      return Promise.all(comparePromises).then(function (results: any[]) {
+      return Promise.all(comparePromises).then((results: any[]) => {
         return {
           data: _.flatten(
             _.filter(
-              _.map(results, function (result) {
+              _.map(results, (result) => {
                 let data = result.data;
 
                 if (data) {
-                  data = _.filter(result.data, function(datum) {
+                  data = _.filter(result.data, (datum) => {
                     return datum.hide !== true;
                   });
                 }
 
                 return data;
               }),
-              function(result) {
+              (result) => {
                 return result !== undefined && result !== null;
               }
             )
