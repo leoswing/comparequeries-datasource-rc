@@ -1,10 +1,13 @@
 {
-  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
   "name": "CompareQueries",
   "id": "autohome-comparequeries-datasource",
+
   "metrics": true,
+  "mixed": true,
+  "hiddenQueries": true,
   "annotations": false,
+
   "queryOptions": {
     "minInterval": true
   },
