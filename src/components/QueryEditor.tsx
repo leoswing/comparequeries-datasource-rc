@@ -16,17 +16,12 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     process: true,
   });
   const [checked, setChecked] = useState(target.process);
-  // const { aliasTypes } = query;
+
   const aliasTypes = ['suffix', 'prefix', 'absolute'];
-
-  console.log('>>>> QueryEditor target', target);
-
-  console.log('>>> QueryEditor query', query);
 
   useEffect(() => {
     // custom codes
     if (!target || !target.timeShifts) {
-      console.log('>>> 执行一次 target 初始化');
       setTarget({
         timeShifts: [],
       });
@@ -69,6 +64,25 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     onRunQuery();
   };
 
+  // TODO： 更新使用对应id 的设置值， 使用filter 查找对应行
+  const onChangeAliasType = (event: ChangeEvent<HTMLSelectElement>, sourceLine: any) => {
+    const changedTimeShift = target.timeShifts.map((item: any)=> {
+      if (item.id === sourceLine.id) {
+        return {
+          ...item,
+          aliasType: event.target.value,
+        };
+      } else {
+        return item;
+      }
+    });
+
+    setTarget({
+      ...target,
+      timeShifts: changedTimeShift,
+    });
+  };
+
   const addTimeShifts = () => {
     let id = getTimeShiftId();
     setTarget({
@@ -80,24 +94,24 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     });
   };
 
+  // remove timeShift row
   const removeTimeShift = (timeShift: number) => {
     if (target.timeShifts && target.timeShifts.length <= 1) {
       return;
     }
 
     const index = _.indexOf(target.timeShifts, timeShift);
-    target.timeShifts.splice(index, 1);
+
+    setTarget({
+      ...target,
+      timeShifts: target.timeShifts.splice(index, 1)
+    });
 
     refreshTimeShifts();
   };
 
   const refreshTimeShifts = () => {
     onRunQuery();
-  };
-
-  const onAliasAsChange = (aliasAsParam: any) => {
-    console.error(`timeShift.aliasAs ${target.aliasAs}`);
-    console.error('aliasAs=' + aliasAsParam);
   };
 
   const getTimeShiftId = () => {
@@ -140,9 +154,9 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
         </InlineFieldRow>
       </div>
 
-      <InlineFieldRow>
+      <HorizontalGroup>
+        <InlineFieldRow>
 
-        <HorizontalGroup>
           {
             target.timeShifts.map((timeShift: any) => {
               return (
@@ -173,41 +187,44 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                   />
 
                   <span className="gf-form-label width-6">alias type</span>
-                  <select className="gf-form-input" defaultValue={'suffix'} onChange={onAliasAsChange} value={timeShift.aliasType}>
-                    {Object.values(aliasTypes).map(val => (<option value={val} key={val}>{val}</option>))}
-                  </select>
+                  <div className="gf-form-select-wrapper">
+                    <select className="gf-form-input" defaultValue={'suffix'} value={timeShift.aliasType || 'suffix'} name={timeShift.aliasType || 'suffix'} onChange={e => onChangeAliasType(e, timeShift)} >
+                      {aliasTypes.map(val => (<option value={val} key={val}>{val}</option>))}
+                    </select>
+                  </div>
 
                   <span className="gf-form-label width-4" title="only valid when alias type is suffix or prefix">delimiter</span>
                   <input disabled={timeShift.aliasType === 'absolute'}
-                      type="text"
-                      className="gf-form-input max-width-8"
-                      placeholder="default:_"
-                      value={timeShift.delimiter}
-                      onChange={targetBlur}
-                      onBlur={targetBlur}
-                    />
+                    type="text"
+                    className="gf-form-input max-width-8"
+                    placeholder="default:_"
+                    value={timeShift.delimiter}
+                    onChange={targetBlur}
+                    onBlur={targetBlur}
+                  />
 
                   {
-                    target.timeShifts.length > 1 ? <label className="gf-form-label">
+                    target.timeShifts.length > 1 && (<label className="gf-form-label">
                       <a className="pointer" onClick={() => removeTimeShift(timeShift)}>
                         <i className="fa fa-trash"></i>
                       </a>
-                    </label> : null
+                    </label>)
                   }
                 </div>)
             })
           }
 
-        </HorizontalGroup>
+        </InlineFieldRow>
 
-        <button
-          className="btn btn-secondary gf-form-btn"
-          onClick={addTimeShifts}
-        >
-          Add time shift
-        </button>
+      </HorizontalGroup>
 
-      </InlineFieldRow>
+      <button
+        className="btn btn-secondary gf-form-btn"
+        onClick={addTimeShifts}
+      >
+        Add time shift
+      </button>
+
     </div>
   );
 }
