@@ -1,6 +1,6 @@
-import React, { ChangeEvent, useEffect, useState, useCallback } from 'react';
+import React, { ChangeEvent, useEffect, useState } from 'react';
 import _ from 'lodash';
-import { InlineField, Stack, InlineFormLabel, InlineFieldRow, HorizontalGroup, InlineSwitch } from '@grafana/ui';
+import { InlineField, InlineFieldRow, HorizontalGroup, InlineSwitch } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from '../datasource';
 import { MyDataSourceOptions, MyQuery } from '../types';
@@ -15,7 +15,6 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     timeShifts: [],
     process: true,
   });
-  const [checked, setChecked] = useState(target.process);
 
   const aliasTypes = ['suffix', 'prefix', 'absolute'];
 
@@ -37,40 +36,27 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
 
-   // @ts-ignore
-  const onQueryTextChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onChange({ ...query, queryText: event.target.value });
+  // @ts-ignore
+  const onQueryInfoChange = (value: any, sourceKey: string) => {
+    // set target
+    setTarget({
+      ...target,
+      [sourceKey]: value,
+    });
+
+    onChange({ ...query, target });
+
     // executes the query
     onRunQuery();
   };
 
-  const onProcessChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setChecked(e.currentTarget.checked);
-
-    targetBlur(e);
-  };
-
-  const targetBlur = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    console.log('>>> value', value);
-
-    onChange({ ...query, queryText: event.target.value });
-
-    onRunQuery();
-  };
-
-  // @ts-ignore
-  const onChangeInternal = () => {
-    onRunQuery();
-  };
-
-  // TODO： 更新使用对应id 的设置值， 使用filter 查找对应行
-  const onChangeAliasType = (event: ChangeEvent<HTMLSelectElement>, sourceLine: any) => {
+  // 统一封装 timeShift 单条内容变更处理
+  const onTimeShiftStateChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>, sourceLine: Record<string, any>, sourceKey: string) => {
     const changedTimeShift = target.timeShifts.map((item: any)=> {
       if (item.id === sourceLine.id) {
         return {
           ...item,
-          aliasType: event.target.value,
+          [sourceKey]: event.target.value,
         };
       } else {
         return item;
@@ -81,6 +67,24 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
       ...target,
       timeShifts: changedTimeShift,
     });
+  };
+
+  // timeShift amount change event
+  const onTimeShiftChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>, sourceLine: Record<string, any>, sourceKey: string) => {
+    onTimeShiftStateChange(event, sourceLine, sourceKey);
+
+    console.log('>>>> origin query', query);
+    console.log('>>> current target', target, event.target.value);
+
+    onChange({ ...query, target });
+
+    // executes the query
+    onRunQuery();
+  };
+
+  // @ts-ignore
+  const onChangeInternal = () => {
+    onRunQuery();
   };
 
   const addTimeShifts = () => {
@@ -141,13 +145,14 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
             <input
               type="text"
               className="gf-form-input"
+              spellCheck="false"
               value={target.query}
               placeholder="query"
-              onBlur={targetBlur}
+              onBlur={e => onQueryInfoChange(e.target.value, 'query')}
             />
 
             <InlineField label="Process TimeShift" className='width-12'>
-              <InlineSwitch value={checked} onChange={onProcessChange} />
+              <InlineSwitch value={target.process} onChange={e => onQueryInfoChange(e.currentTarget.checked, 'process')} />
             </InlineField>
 
           </div>
@@ -172,8 +177,8 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     className="gf-form-input max-width-8"
                     placeholder="1h"
                     value={timeShift.value}
-                    onChange={targetBlur}
-                    onBlur={targetBlur}
+                    onChange={e => onTimeShiftChange(e, timeShift, 'value')}
+                    onBlur={e => onTimeShiftChange(e, timeShift, 'value')}
                   />
 
                   <span className="gf-form-label width-4">alias</span>
@@ -182,13 +187,13 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     className="gf-form-input max-width-8"
                     placeholder="auto"
                     value={timeShift.alias}
-                    onChange={targetBlur}
-                    onBlur={targetBlur}
+                    onChange={e => onTimeShiftChange(e, timeShift, 'alias')}
+                    onBlur={e => onTimeShiftChange(e, timeShift, 'alias')}
                   />
 
                   <span className="gf-form-label width-6">alias type</span>
                   <div className="gf-form-select-wrapper">
-                    <select className="gf-form-input" defaultValue={'suffix'} value={timeShift.aliasType || 'suffix'} name={timeShift.aliasType || 'suffix'} onChange={e => onChangeAliasType(e, timeShift)} >
+                    <select className="gf-form-input" defaultValue={'suffix'} value={timeShift.aliasType || 'suffix'} name={timeShift.aliasType || 'suffix'} onChange={e => onTimeShiftChange(e, timeShift, 'aliasType')} >
                       {aliasTypes.map(val => (<option value={val} key={val}>{val}</option>))}
                     </select>
                   </div>
@@ -199,8 +204,8 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     className="gf-form-input max-width-8"
                     placeholder="default:_"
                     value={timeShift.delimiter}
-                    onChange={targetBlur}
-                    onBlur={targetBlur}
+                    onChange={e => onTimeShiftChange(e, timeShift, 'delimiter')}
+                    onBlur={e => onTimeShiftChange(e, timeShift, 'delimiter')}
                   />
 
                   {

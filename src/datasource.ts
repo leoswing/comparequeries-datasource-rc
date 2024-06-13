@@ -36,18 +36,23 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   filterQuery(query: MyQuery): boolean {
+    console.log('>>>> trigger filterQuery');
     // if no query has been provided, prevent the query from being executed
-    return !!query.queryText;
+    return !!query.target;
   }
 
   //  ===== custom query start =====
     // Called once per panel (graph)
    async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
       let _this = this;
-      let sets = _.groupBy(options.targets, function (ds) {
+
+      console.log('>>> query options', options);
+
+      let sets = _.groupBy(options.targets, function (ds: any) {
+        console.log('>>>> sets ds', ds);
         // Trying to maintain compatibility with grafana lower then 8.3.x
-        if (ds?.datasource?.uid === undefined) {
-          return ds!.datasource;
+        if (ds.datasource.uid === undefined) {
+          return ds.datasource;
         }
 
         return ds.datasource.uid;
@@ -60,9 +65,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         let opt = _.cloneDeep(options);
   
         let promise = _this.datasourceSrv.get(dsName).then((ds: any) => {
-          console.log('>>> ds', ds);
-
           if (ds.meta.id === _this.meta.id) {
+            console.log('>>>> equals meta id');
             return _this._compareQuery(options, targets, querys, _this);
           } else {
             opt.targets = targets;
