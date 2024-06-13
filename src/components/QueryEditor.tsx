@@ -69,16 +69,17 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     });
   };
 
+  // 光标移走后执行查询
+  const targetBlur = () => {
+    onChange({ ...query, ...target });
+    onRunQuery();
+  };
+
   // timeShift amount change event
   const onTimeShiftChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>, sourceLine: Record<string, any>, sourceKey: string) => {
     onTimeShiftStateChange(event, sourceLine, sourceKey);
 
-    console.log('>>>> origin query', query);
-
     onChange({ ...query, ...target });
-
-    // executes the query
-    onRunQuery();
   };
 
   // @ts-ignore
@@ -177,7 +178,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     placeholder="1h"
                     value={timeShift.value}
                     onChange={e => onTimeShiftChange(e, timeShift, 'value')}
-                    onBlur={e => onTimeShiftChange(e, timeShift, 'value')}
+                    onBlur={targetBlur}
                   />
 
                   <span className="gf-form-label width-4">alias</span>
@@ -187,12 +188,12 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     placeholder="auto"
                     value={timeShift.alias}
                     onChange={e => onTimeShiftChange(e, timeShift, 'alias')}
-                    onBlur={e => onTimeShiftChange(e, timeShift, 'alias')}
+                    onBlur={targetBlur}
                   />
 
                   <span className="gf-form-label width-6">alias type</span>
                   <div className="gf-form-select-wrapper">
-                    <select className="gf-form-input" defaultValue={'suffix'} value={timeShift.aliasType || 'suffix'} name={timeShift.aliasType || 'suffix'} onChange={e => onTimeShiftChange(e, timeShift, 'aliasType')} >
+                    <select className="gf-form-input" defaultValue={'suffix'} value={timeShift.aliasType || 'suffix'} name={timeShift.aliasType || 'suffix'} onChange={e => onTimeShiftChange(e, timeShift, 'aliasType')} onBlur={targetBlur} >
                       {aliasTypes.map(val => (<option value={val} key={val}>{val}</option>))}
                     </select>
                   </div>
@@ -204,7 +205,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     placeholder="default:_"
                     value={timeShift.delimiter}
                     onChange={e => onTimeShiftChange(e, timeShift, 'delimiter')}
-                    onBlur={e => onTimeShiftChange(e, timeShift, 'delimiter')}
+                    onBlur={targetBlur}
                   />
 
                   {

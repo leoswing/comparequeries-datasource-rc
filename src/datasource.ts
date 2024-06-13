@@ -113,7 +113,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       _.forEach(targets, (target) => {
         let query = target.query;
 
-        if (query === null || query === '' || querys[query] === null) {
+        // TODO: 添加undefined判断
+        if (query === null || query === '' || querys[query] === null || !query || !querys[query]) {
           return;
         }
 
