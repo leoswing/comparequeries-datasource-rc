@@ -1,8 +1,8 @@
 import React from 'react';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { MyDataSourceOptions, MySecureJsonData } from '../types';
+import { CompareQueriesOptions, CompareQueriesJsonData } from '../types';
 
-interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions, MySecureJsonData> {}
+interface Props extends DataSourcePluginOptionsEditorProps<CompareQueriesOptions, CompareQueriesJsonData> {}
 
 export function ConfigEditor(props: Props) {
   return (
