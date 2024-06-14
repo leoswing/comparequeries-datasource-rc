@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useEffect, useState } from 'react';
+import React, { ChangeEvent, useEffect, useState, useRef } from 'react';
 import _ from 'lodash';
 import { InlineField, InlineFieldRow, HorizontalGroup, InlineSwitch } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
@@ -7,14 +7,18 @@ import { MyDataSourceOptions, MyQuery } from '../types';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
-// TODO: 按照原来的调整-添加初始化支持
+interface TimeShiftLineOptions {
+  jsonData: {
+    id: number | string,
+  } & Record<string, any>;
+}
+
 export function QueryEditor({ query, onChange, onRunQuery }: Props) {
-  // @ts-ignore
-  const [errors] = useState<any>({});
-  const [target, setTarget] = useState<any>({
+  let [target, setTarget] = useState<any>({
     timeShifts: [],
     process: true,
   });
+  const lastRunValueRef = useRef<Record<string, any> | null>(null);
 
   const aliasTypes = ['suffix', 'prefix', 'absolute'];
 
@@ -22,6 +26,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     // custom codes
     if (!target || !target.timeShifts) {
       setTarget({
+        ...target,
         timeShifts: [],
       });
     }
@@ -30,33 +35,54 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     }
     if (typeof target.process === 'undefined') {
       setTarget({
+        ...target,
         process: true,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
 
-  // @ts-ignore
-  const onQueryInfoChange = (value: any, sourceKey: string) => {
-    // set target
-    setTarget({
+  // Query refId change event
+  const onQueryRefChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const updated = {
       ...target,
-      [sourceKey]: value,
-    });
+      query: event.target.value,
+    };
 
-    onChange({ ...query, ...target });
+    setTarget(updated);
+  };
 
-    // executes the query
+  /**
+   * Event handler for process status change
+   *
+   * @param {ChangeEvent<any>} event
+   */
+  const onProcessChange = (event: ChangeEvent<any>) => {
+    const updated = {
+      ...target,
+      process: event.target.checked,
+    };
+
+    setTarget(updated);
+
+    onChange({ ...query, ...updated });
     onRunQuery();
   };
 
-  // 统一封装 timeShift 单条内容变更处理
-  const onTimeShiftStateChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>, sourceLine: Record<string, any>, sourceKey: string) => {
+  /**
+   * TimeShift line field change event handler
+   * 
+   * @param {string} key timeShift line input field
+   * @param {TimeShiftLineOptions} timeShiftLine 对应的timeShift line 编辑查询配置
+   */
+  const onChangeHandler = (key: string, timeShiftLine: TimeShiftLineOptions) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { jsonData: { id: sourceLineId = '' } = {} } = timeShiftLine || {};
+
     const changedTimeShift = target.timeShifts.map((item: any)=> {
-      if (item.id === sourceLine.id) {
+      if (item.id === sourceLineId) {
         return {
           ...item,
-          [sourceKey]: event.target.value,
+          [key]: event.target.value,
         };
       } else {
         return item;
@@ -69,52 +95,70 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     });
   };
 
-  // 光标移走后执行查询
-  const targetBlur = () => {
+  /**
+   * Handle runQuery event
+   */
+  const handleRunQuery = () => {
+    lastRunValueRef.current = target;
+
     onChange({ ...query, ...target });
     onRunQuery();
   };
 
-  // timeShift amount change event
-  const onTimeShiftChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>, sourceLine: Record<string, any>, sourceKey: string) => {
-    onTimeShiftStateChange(event, sourceLine, sourceKey);
-
-    onChange({ ...query, ...target });
+  /**
+   * Run query when onBlur event triggered, while with object equality check
+   */
+  const handleBlur = () => {
+    if (!_.isEqual(target, lastRunValueRef.current)) {
+      handleRunQuery();
+    }
   };
 
   // @ts-ignore
-  const onChangeInternal = () => {
-    onRunQuery();
-  };
+  // const onChangeInternal = () => {
+  //   onRunQuery();
+  // };
 
+  /**
+   * Add timeShift line
+   */
   const addTimeShifts = () => {
     let id = getTimeShiftId();
-    setTarget({
+
+    const updated = {
       ...target,
       timeShifts: [
         ...target.timeShifts,
         {id: id},
       ]
-    });
+    };
+
+    setTarget(updated);
   };
 
-  // remove timeShift row
-  const removeTimeShift = (timeShift: number) => {
+  /**
+   * Remove timeShift row, test ok
+   * @param timeShift 
+   * @returns 
+   */
+  const removeTimeShift = (timeShift: Record<string, any>) => {
     if (target.timeShifts && target.timeShifts.length <= 1) {
       return;
     }
 
-    const index = _.indexOf(target.timeShifts, timeShift);
+    const timeShiftsUpdated = target.timeShifts.filter((item: any) =>
+      item.id !== timeShift.id
+    );
 
-    setTarget({
+    const updated = {
       ...target,
-      timeShifts: target.timeShifts.splice(index, 1)
-    });
+      timeShifts: timeShiftsUpdated,
+    };
 
-    refreshTimeShifts();
-  };
+    setTarget(updated);
 
-  const refreshTimeShifts = () => {
+    onChange({ ...query, ...updated });
+
     onRunQuery();
   };
 
@@ -148,11 +192,12 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
               spellCheck="false"
               value={target.query}
               placeholder="query"
-              onBlur={e => onQueryInfoChange(e.target.value, 'query')}
+              onChange={onQueryRefChange}
+              onBlur={handleBlur}
             />
 
             <InlineField label="Process TimeShift" className='width-12'>
-              <InlineSwitch value={target.process} onChange={e => onQueryInfoChange(e.currentTarget.checked, 'process')} />
+              <InlineSwitch value={target.process} onChange={onProcessChange}/>
             </InlineField>
 
           </div>
@@ -161,7 +206,6 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
 
       <HorizontalGroup>
         <InlineFieldRow>
-
           {
             target.timeShifts.map((timeShift: any) => {
               return (
@@ -177,8 +221,8 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     className="gf-form-input max-width-8"
                     placeholder="1h"
                     value={timeShift.value}
-                    onChange={e => onTimeShiftChange(e, timeShift, 'value')}
-                    onBlur={targetBlur}
+                    onChange={onChangeHandler('value', { jsonData: timeShift })}
+                    onBlur={handleBlur}
                   />
 
                   <span className="gf-form-label width-4">alias</span>
@@ -187,13 +231,19 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     className="gf-form-input max-width-8"
                     placeholder="auto"
                     value={timeShift.alias}
-                    onChange={e => onTimeShiftChange(e, timeShift, 'alias')}
-                    onBlur={targetBlur}
+                    onChange={onChangeHandler('alias', { jsonData: timeShift })}
+                    onBlur={handleBlur}
                   />
 
                   <span className="gf-form-label width-6">alias type</span>
                   <div className="gf-form-select-wrapper">
-                    <select className="gf-form-input" defaultValue={'suffix'} value={timeShift.aliasType || 'suffix'} name={timeShift.aliasType || 'suffix'} onChange={e => onTimeShiftChange(e, timeShift, 'aliasType')} onBlur={targetBlur} >
+                    <select 
+                    className="gf-form-input"
+                    defaultValue={'suffix'}
+                    value={timeShift.aliasType || 'suffix'}
+                    onChange={onChangeHandler('aliasType', { jsonData: timeShift })}
+                    onBlur={handleBlur}
+                  >
                       {aliasTypes.map(val => (<option value={val} key={val}>{val}</option>))}
                     </select>
                   </div>
@@ -204,8 +254,8 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     className="gf-form-input max-width-8"
                     placeholder="default:_"
                     value={timeShift.delimiter}
-                    onChange={e => onTimeShiftChange(e, timeShift, 'delimiter')}
-                    onBlur={targetBlur}
+                    onChange={onChangeHandler('delimiter', { jsonData: timeShift })}
+                    onBlur={handleBlur}
                   />
 
                   {
@@ -218,7 +268,6 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                 </div>)
             })
           }
-
         </InlineFieldRow>
 
       </HorizontalGroup>
