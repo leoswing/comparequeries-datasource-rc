@@ -3,9 +3,9 @@ import _ from 'lodash';
 import { InlineField, InlineFieldRow, HorizontalGroup, InlineSwitch } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from '../datasource';
-import { MyDataSourceOptions, MyQuery } from '../types';
+import { CompareQueriesOptions, CompareQueriesQuery } from '../types';
 
-type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
+type Props = QueryEditorProps<DataSource, CompareQueriesQuery, CompareQueriesOptions>;
 
 interface TimeShiftLineOptions {
   jsonData: {

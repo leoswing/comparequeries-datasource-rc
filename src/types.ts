@@ -7,7 +7,7 @@ enum AliasTypes {
   absolute = 'absolute',
 }
 
-export interface MyQuery extends DataQuery {
+export interface CompareQueriesQuery extends DataQuery {
   queryText?: string;
   errors: any;
   query: any;
@@ -17,7 +17,7 @@ export interface MyQuery extends DataQuery {
   process: boolean;
 }
 
-export const DEFAULT_QUERY: Partial<MyQuery> = {
+export const DEFAULT_QUERY: Partial<CompareQueriesQuery> = {
   aliasTypes: AliasTypes.suffix,
   units: ['y', 'M', 'w', 'd', 'h', 'm', 's'],
   process: true,
@@ -35,7 +35,7 @@ export interface DataSourceResponse {
 /**
  * These are options configured for each DataSource instance
  */
-export interface MyDataSourceOptions extends DataSourceJsonData {
+export interface CompareQueriesOptions extends DataSourceJsonData {
   path?: string;
   datasourceSrv?: string;
   $q?: string;
@@ -47,6 +47,6 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
 /**
  * Value that is used in the backend, but never sent over HTTP to the frontend
  */
-export interface MySecureJsonData {
+export interface CompareQueriesJsonData {
   apiKey?: string;
 }

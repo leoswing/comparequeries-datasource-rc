@@ -9,12 +9,12 @@ import {
 } from '@grafana/data';
 import { getDataSourceSrv, DataSourceSrv, getTemplateSrv } from '@grafana/runtime';
 
-import { MyQuery, MyDataSourceOptions, DEFAULT_QUERY } from './types';
+import { CompareQueriesQuery, CompareQueriesOptions, DEFAULT_QUERY } from './types';
 import _ from 'lodash';
 // eslint-disable-next-line no-restricted-imports
 import moment from 'moment';
 
-export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
+export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQueriesOptions> {
   // custom variables
   id: number;
   datasourceSrv: DataSourceSrv;
@@ -22,7 +22,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   meta: any;
   units = ['y', 'M', 'w', 'd', 'h', 'm', 's'];
 
-  constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
+  constructor(instanceSettings: DataSourceInstanceSettings<CompareQueriesOptions>) {
     super(instanceSettings);
 
     this.id = instanceSettings.id;
@@ -31,17 +31,17 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     this.templateSrv = getTemplateSrv();
   }
 
-  getDefaultQuery(_: CoreApp): Partial<MyQuery> {
+  getDefaultQuery(_: CoreApp): Partial<CompareQueriesQuery> {
     return DEFAULT_QUERY;
   }
 
-  filterQuery(query: MyQuery): boolean {
+  filterQuery(query: CompareQueriesQuery): boolean {
     // if no query has been provided, prevent the query from being executed
     return !!query.target;
   }
 
   // Called once per panel (graph)
-  async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
+  async query(options: DataQueryRequest<CompareQueriesQuery>): Promise<DataQueryResponse> {
     let _this = this;
 
     let sets = _.groupBy(options.targets, (ds: any) => {
