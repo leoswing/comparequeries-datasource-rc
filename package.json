@@ -1,6 +1,6 @@
 {
   "name": "autohome-comparequeries-datasource",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Grafana plugin for compare queries",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
