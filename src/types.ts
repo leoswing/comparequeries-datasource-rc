@@ -1,26 +1,16 @@
 import { DataSourceJsonData } from '@grafana/data';
 import { DataQuery } from '@grafana/schema';
 
-enum AliasTypes {
-  suffix = 'suffix',
-  prefix = 'prefix',
-  absolute = 'absolute',
-}
-
 export interface CompareQueriesQuery extends DataQuery {
-  queryText?: string;
-  errors: any;
   query: any;
   target: any;
-  aliasTypes: AliasTypes;
-  units?: string[];
-  process: boolean;
+  aliasTypes: string[];
+  units: string[];
 }
 
 export const DEFAULT_QUERY: Partial<CompareQueriesQuery> = {
-  aliasTypes: AliasTypes.suffix,
+  aliasTypes: ['suffix', 'prefix', 'absolute'],
   units: ['y', 'M', 'w', 'd', 'h', 'm', 's'],
-  process: true,
 };
 
 export interface DataPoint {
@@ -36,10 +26,6 @@ export interface DataSourceResponse {
  * These are options configured for each DataSource instance
  */
 export interface CompareQueriesOptions extends DataSourceJsonData {
-  path?: string;
-  datasourceSrv?: string;
-  $q?: string;
-  templateSrv?: string;
   meta?: string | any;
   units?: string[];
 }
