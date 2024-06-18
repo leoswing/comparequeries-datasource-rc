@@ -1,16 +1,30 @@
-# Grafana data source plugin template
+# CompareQueries datasource plugin for Grafana
 
 > autohome-compareQueries-datasource plugin, with react upgrade support.
 
-This template is a starting point for building a Data Source Plugin for Grafana.
+This datasource plugin allows you to query source with compare ability support.
 
-## What are Grafana data source plugins?
 
-Grafana supports a wide range of data sources, including Prometheus, MySQL, and even Datadog. There’s a good chance you can already visualize metrics from the systems you have set up. In some cases, though, you already have an in-house metrics solution that you’d like to add to your Grafana dashboards. Grafana Data Source Plugins enables integrating such solutions with Grafana.
+# Installation
 
-## Getting started
+Installing CompareQueries Grafana datasource [requires](https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/#allow_loading_unsigned_plugins)
+the following changes to Grafana's `grafana.ini` config:
+``` ini
+[plugins]
+allow_loading_unsigned_plugins = autohome-comparequeries-datasource
+```
 
-### Frontend
+For `grafana-operator` users, please adjust `config:` section in your `kind=Grafana` resource as below
+
+```
+  config:
+    plugins:
+      allow_loading_unsigned_plugins: "autohome-comparequeries-datasource"
+```
+
+# Development
+
+For Grafana developers, follow the instructions as below.
 
 1. Install dependencies
 

@@ -12,11 +12,15 @@
     "minInterval": true
   },
   "info": {
-    "description": "Grafana plugin for compare queries",
+    "description": "Grafana plugin built as a datasource plugin that combines and contrasts different time shifts data.",
     "author": {
       "name": "Mit"
     },
-    "keywords": ["datasource"],
+    "keywords": [
+      "datasource",
+      "compare",
+      "time shift"
+    ],
     "logos": {
       "small": "img/logo.png",
       "large": "img/logo.png"
@@ -27,7 +31,7 @@
     "updated": "%TODAY%"
   },
   "dependencies": {
-    "grafanaDependency": ">=10.3.3",
+    "grafanaDependency": ">=6.3.0",
     "plugins": []
   }
 }
