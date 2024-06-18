@@ -1,51 +1,54 @@
-<!-- This README file is going to be the one displayed on the Grafana.com website for your plugin. Uncomment and replace the content here before publishing.
+# CompareQueries datasource plugin for Grafana
 
-Remove any remaining comments before publishing as these may be displayed on Grafana.com -->
+This datasource plugin allows you to query source with compare ability support, and with React upgrade support.
 
-# Autohome-Comparequeries-Datasource
 
-Grafana plugin for compare queries
+# Overview
 
-<!-- To help maximize the impact of your README and improve usability for users, we propose the following loose structure:
+This plugin is based on [autohome-compareQueries-datasource](https://github.com/AutohomeCorp/autohome-compareQueries-datasource), while with React based framework support.
 
-**BEFORE YOU BEGIN**
-- Ensure all links are absolute URLs so that they will work when the README is displayed within Grafana and Grafana.com
-- Be inspired ✨
-  - [grafana-polystat-panel](https://github.com/grafana/grafana-polystat-panel)
-  - [volkovlabs-variable-panel](https://github.com/volkovlabs/volkovlabs-variable-panel)
+- Construct with React framework
+- Fix undefined data points issue
+- Add timeShift alias support
 
-**ADD SOME BADGES**
 
-Badges convey useful information at a glance for users whether in the Catalog or viewing the source code. You can use the generator on [Shields.io](https://shields.io/badges/dynamic-json-badge) together with the Grafana.com API
-to create dynamic badges that update automatically when you publish a new version to the marketplace.
+# Installation
 
-- For the logo field use 'grafana'.
-- Examples (label: query)
-  - Downloads: $.downloads
-  - Catalog Version: $.version
-  - Grafana Dependency: $.grafanaDependency
-  - Signature Type: $.versionSignatureType
+## Plugin download
 
-Full example: ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?logo=grafana&query=$.version&url=https://grafana.com/api/plugins/grafana-polystat-panel&label=Marketplace&prefix=v&color=F47A20)
+First of all, Clone this project into the grafana plugins directory (default is `/var/lib/grafana/plugins` if you installed grafana using a package). 
 
-Consider other [badges](https://shields.io/badges) as you feel appropriate for your project.
+And then Restart grafana.
 
-## Overview / Introduction
-Provide one or more paragraphs as an introduction to your plugin to help users understand why they should use it.
+## Grafana container config
 
-Consider including screenshots:
-- in [plugin.json](https://grafana.com/developers/plugin-tools/reference/plugin-json#info) include them as relative links.
-- in the README ensure they are absolute URLs.
+Installing CompareQueries Grafana datasource [requires](https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/#allow_loading_unsigned_plugins)
+the following changes to Grafana's `grafana.ini` config:
 
-## Requirements
-List any requirements or dependencies they may need to run the plugin.
+``` ini
+[plugins]
+allow_loading_unsigned_plugins = autohome-comparequeries-datasource
+```
 
-## Getting Started
-Provide a quick start on how to configure and use the plugin.
+For `grafana-operator` users, please adjust `config:` section in your `kind=Grafana` resource as below
 
-## Documentation
-If your project has dedicated documentation available for users, provide links here. For help in following Grafana's style recommendations for technical documentation, refer to our [Writer's Toolkit](https://grafana.com/docs/writers-toolkit/).
+```
+  config:
+    plugins:
+      allow_loading_unsigned_plugins: "autohome-comparequeries-datasource"
+```
 
-## Contributing
-Do you want folks to contribute to the plugin or provide feedback through specific means? If so, tell them how!
--->
+## Frontend datasource plugin usage
+
+- Create a data source of type CompareQueries.
+- Create a basic query
+- Create a comparison query based on the base query.
+- Increase the time of comparison query in comparison query.
+
+# Contributing
+
+Thanks to the contributors as below:
+
+- [grafana](https://github.com/grafana/grafana)
+- [simple-json-datasource](https://github.com/grafana/simple-json-datasource)
+- [grafana-meta-queries](https://github.com/GoshPosh/grafana-meta-queries)
