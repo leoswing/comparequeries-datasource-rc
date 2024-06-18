@@ -21,10 +21,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.14.0
       - name: Build Project
         run: |
-          npm install
+          npm ci
           npm run build
       - name: Build ZIP
         run: |
