@@ -4,10 +4,12 @@ import {
   DataQueryResponse,
   DataSourceApi,
   DataSourceInstanceSettings,
-  MutableField,
-  ArrayVector,
+  getFieldDisplayName,
+  DataFrame,
+  FieldType,
+  Field,
 } from '@grafana/data';
-import { getDataSourceSrv, DataSourceSrv, getTemplateSrv } from '@grafana/runtime';
+import { getDataSourceSrv, DataSourceSrv, getTemplateSrv, TemplateSrv } from '@grafana/runtime';
 
 import { CompareQueriesQuery, CompareQueriesOptions, DEFAULT_QUERY } from './types';
 import _ from 'lodash';
@@ -15,10 +17,9 @@ import _ from 'lodash';
 import moment from 'moment';
 
 export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQueriesOptions> {
-  // custom variables
   id: number;
   datasourceSrv: DataSourceSrv;
-  templateSrv: any;
+  templateSrv: TemplateSrv;
   meta: any;
   units = ['y', 'M', 'w', 'd', 'h', 'm', 's'];
 
@@ -40,9 +41,22 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     return !!query.target;
   }
 
+  getValueFieldName(line: DataFrame) {
+    try {
+      const valueField = line.fields?.find((field: any) => field.type === FieldType.number);
+      const valueFieldName = valueField && getFieldDisplayName(valueField, line);
+  
+      return valueFieldName;
+    } catch (error) {
+      console.warn('Failed to execute getValueFieldName:', error);
+
+      return '';
+    }
+  }
+
   // Called once per panel (graph)
   async query(options: DataQueryRequest<CompareQueriesQuery>): Promise<DataQueryResponse> {
-    let _this = this;
+    let context = this;
 
     let sets = _.groupBy(options.targets, (ds: any) => {
       // Trying to maintain compatibility with grafana lower then 8.3.x
@@ -59,9 +73,9 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     _.forEach(sets, (targets, dsName) => {
       let opt = _.cloneDeep(options);
 
-      let promise = _this.datasourceSrv.get(dsName).then((ds: any) => {
-        if (ds.meta.id === _this.meta.id) {
-          return _this._compareQuery(options, targets, querys, _this);
+      let promise = context.datasourceSrv.get(dsName).then((ds: any) => {
+        if (ds.meta.id === context.meta.id) {
+          return context._compareQuery(options, targets, querys, context);
         } else {
           opt.targets = targets;
           let result = ds.query(opt);
@@ -98,7 +112,7 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     return result;
   }
 
-  _compareQuery(options: Record<string, any>, targets: any, querys: any, _this: any) {
+  _compareQuery(options: Record<string, any>, targets: any, querys: any, _this: DataSource) {
     let comparePromises: any[] = [];
 
     _.forEach(targets, (target) => {
@@ -130,8 +144,8 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
                   return { data: [] };
                 }
 
-                timeShiftValue = getTemplateSrv().replace(timeShift.value, options.scopedVars);
-                timeShiftAlias = getTemplateSrv().replace(timeShift.alias, options.scopedVars) || timeShiftValue;
+                timeShiftValue = _this.templateSrv.replace(timeShift.value, options.scopedVars);
+                timeShiftAlias = _this.templateSrv.replace(timeShift.alias, options.scopedVars) || timeShiftValue;
 
                 if (timeShiftValue === null || timeShiftValue === '' || typeof timeShiftValue === 'undefined') {
                   return { data: [] };
@@ -166,7 +180,9 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
                     //else if new data frames format with multiple series
                     line.fields.forEach((field: Record<string, any>) => {
                       if (field.name) {
-                        field.name = _this.generalAlias(field.name, timeShiftAlias, aliasType, delimiter);
+                        const valueFieldName = _this.getValueFieldName(line);
+                        const inputName = field.type === FieldType.number && valueFieldName ? valueFieldName : field.name;
+                        field.name = _this.generalAlias(inputName, timeShiftAlias, aliasType, delimiter);
                       }
 
                       if (field.config && field.config.displayName) {
@@ -217,16 +233,16 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
                         const unshiftedTimeField = line.fields.find((field: Record<string, any>) => field.type === 'time');
 
                         if (unshiftedTimeField) {
-                          const timeField: MutableField = {
+                          const timeField: Field = {
                             name: unshiftedTimeField.name,
                             type: unshiftedTimeField.type,
                             config: unshiftedTimeField.config || {},
                             labels: unshiftedTimeField.labels,
-                            values: new ArrayVector(),
+                            values: [],
                           };
 
                           for (let i = 0; i < line.length; i++) {
-                            timeField.values.set(i, unshiftedTimeField.values.get(i) + timeShift_ms);
+                            timeField.values[i] = unshiftedTimeField.values.get(i) + timeShift_ms;
                           }
                           line.fields[0] = timeField;
                         }
