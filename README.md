@@ -1,14 +1,33 @@
 # CompareQueries datasource plugin for Grafana
 
-> autohome-compareQueries-datasource plugin, with react upgrade support.
+This datasource plugin allows you to query source with compare ability support，with React upgrade support.
 
-This datasource plugin allows you to query source with compare ability support.
+# Overview
+
+Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/), we have improments as below:
+
+- Restructure codebase with React-based, which could refer to the [tutorial](https://grafana.com/developers/plugin-tools/tutorials/build-a-data-source-plugin)
+- Solve data point undefined issue when no database is selected.
+- Add alias name as displayName support.
+
+![Screenshot-conf](./img/conf-datasource.png)
+
+![Screenshot-func](./img/func-snapshot.png)
 
 
 # Installation
 
+## Plugin download
+
+First of all, Clone this project into the grafana plugins directory (default is `/var/lib/grafana/plugins` if you installed grafana using a package). 
+
+And then Restart grafana.
+
+## Grafana container config
+
 Installing CompareQueries Grafana datasource [requires](https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/#allow_loading_unsigned_plugins)
 the following changes to Grafana's `grafana.ini` config:
+
 ``` ini
 [plugins]
 allow_loading_unsigned_plugins = autohome-comparequeries-datasource
@@ -22,7 +41,16 @@ For `grafana-operator` users, please adjust `config:` section in your `kind=Graf
       allow_loading_unsigned_plugins: "autohome-comparequeries-datasource"
 ```
 
+## Datasource plugin usage
+
+- Create a data source of type CompareQueries.
+- Create a basic query
+- Create a comparison query based on the base query.
+- Increase the time of comparison query in comparison query.
+
+
 # Development
+> For Grafana plugin developer only
 
 For Grafana developers, follow the instructions as below.
 
@@ -80,44 +108,6 @@ For Grafana developers, follow the instructions as below.
    npm run lint:fix
    ```
 
-# Distributing your plugin
-
-When distributing a Grafana plugin either within the community or privately the plugin must be signed so the Grafana application can verify its authenticity. This can be done with the `@grafana/sign-plugin` package.
-
-_Note: It's not necessary to sign a plugin during development. The docker development environment that is scaffolded with `@grafana/create-plugin` caters for running the plugin without a signature._
-
-## Initial steps
-
-Before signing a plugin please read the Grafana [plugin publishing and signing criteria](https://grafana.com/legal/plugins/#plugin-publishing-and-signing-criteria) documentation carefully.
-
-`@grafana/create-plugin` has added the necessary commands and workflows to make signing and distributing a plugin via the grafana plugins catalog as straightforward as possible.
-
-Before signing a plugin for the first time please consult the Grafana [plugin signature levels](https://grafana.com/legal/plugins/#what-are-the-different-classifications-of-plugins) documentation to understand the differences between the types of signature level.
-
-1. Create a [Grafana Cloud account](https://grafana.com/signup).
-2. Make sure that the first part of the plugin ID matches the slug of your Grafana Cloud account.
-   - _You can find the plugin ID in the `plugin.json` file inside your plugin directory. For example, if your account slug is `acmecorp`, you need to prefix the plugin ID with `acmecorp-`._
-3. Create a Grafana Cloud API key with the `PluginPublisher` role.
-4. Keep a record of this API key as it will be required for signing a plugin
-
-## Signing a plugin
-
-### Using Github actions release workflow
-
-If the plugin is using the github actions supplied with `@grafana/create-plugin` signing a plugin is included out of the box. The [release workflow](./.github/workflows/release.yml) can prepare everything to make submitting your plugin to Grafana as easy as possible. Before being able to sign the plugin however a secret needs adding to the Github repository.
-
-1. Please navigate to "settings > secrets > actions" within your repo to create secrets.
-2. Click "New repository secret"
-3. Name the secret "GRAFANA_API_KEY"
-4. Paste your Grafana Cloud API key in the Secret field
-5. Click "Add secret"
-
-#### Push a version tag
-
-To trigger the workflow we need to push a version tag to github. This can be achieved with the following steps:
-
-1. Run `npm version <major|minor|patch>`
-2. Run `git push origin main --follow-tags`
 
 ## Learn more
 
