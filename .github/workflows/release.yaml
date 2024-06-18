@@ -18,6 +18,10 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Build Project
         run: |
           yarn install
