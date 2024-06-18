@@ -1,3 +1,4 @@
+permissions: write-all
 name: Release
 on:
   release:
@@ -22,9 +23,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.14.0
+          cache: 'npm'
       - name: Build Project
         run: |
-          npm ci
+          npm install
           npm run build
       - name: Build ZIP
         run: |
