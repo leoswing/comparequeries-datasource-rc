@@ -1,7 +1,5 @@
 # Grafana Compare Query Datasource
 
----
-
 [Engilsh](./README.md)
 
 基于Grafana Datasource实现，主要解决[issue](https://github.com/grafana/grafana/issues/2093)
