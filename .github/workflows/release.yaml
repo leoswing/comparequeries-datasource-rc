@@ -36,16 +36,16 @@ jobs:
           asset_path: ./${{ env.NAME }}-${{ env.TAG }}.zip
           asset_name: ${{ env.NAME }}-${{ env.TAG }}.zip
           asset_content_type: application/zip
-      - name: Upload Release SHA
-        id: upload-release-sha
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ env.NAME }}-${{ env.TAG }}.zip.sha1
-          asset_name: ${{ env.NAME }}-${{ env.TAG }}.zip.sha1
-          asset_content_type: application/zip
+      # - name: Upload Release SHA
+      #   id: upload-release-sha
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ github.event.release.upload_url }}
+      #     asset_path: ./${{ env.NAME }}-${{ env.TAG }}.zip.sha1
+      #     asset_name: ${{ env.NAME }}-${{ env.TAG }}.zip.sha1
+      #     asset_content_type: application/zip
       - name: Update version package.json
         uses: pocket-apps/action-update-version@v1
         with:
