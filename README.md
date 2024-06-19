@@ -2,6 +2,11 @@
 
 This datasource plugin allows you to query source with compare ability support，with React upgrade support. Solved issue [compareQueries#40](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/issues/40)
 
+The open-source platform for monitoring and observability, and compare ability upgrade.
+
+[![License](https://img.shields.io/github/license/leoswing/autohome-compareQueries-datasource-rc)](LICENSE)
+![Drone](https://github.com/leoswing/autohome-compareQueries-datasource-rc/actions/workflows/release.yaml/badge.svg)
+
 # Overview
 
 Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/), we have improments as below:
@@ -128,6 +133,14 @@ Step 5. Increase the time of comparison query in comparison query.
 ![Screenshot-usage-comparequeries](./img/usage-comparequeries.png)
 
 
-# Developer guide
+# Contributing
 
-If you want to get started developing with this Grafana plugin, refer to the [developer-guild](./developer-guide.md)
+If you're interested in contributing to the project:
+
+- Start by reading the [Contributing guide](./CONTRIBUTING.md).
+- Learn how to set up your local environment, in our [Developer guide](./developer-guide.md).
+
+
+# License
+
+This plugin is distributed under Apache-2.0 License..
