@@ -1,6 +1,6 @@
 # CompareQueries datasource plugin for Grafana
 
-This datasource plugin allows you to query source with compare ability support，with React upgrade support.
+This datasource plugin allows you to query source with compare ability support，with React upgrade support. Solved issue [compareQueries#40](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/issues/40)
 
 # Overview
 
@@ -9,24 +9,95 @@ Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCor
 - Restructure codebase with React-based, which could refer to the [tutorial](https://grafana.com/developers/plugin-tools/tutorials/build-a-data-source-plugin)
 - Solve data point undefined issue when no database is selected.
 - Add alias name as displayName support.
+- Cache datasource query result and reduce query reduction when query condtions remains the same.
 
 ![Screenshot-conf](./img/conf-datasource.png)
 
 ![Screenshot-func](./img/func-snapshot.png)
 
 
-# Installation
+# Install
 
-## Plugin download
+## Preparation
 
-First of all, Clone this project into the grafana plugins directory (default is `/var/lib/grafana/plugins` if you installed grafana using a package). 
+> Only if you have already the old version plugin.
 
-And then Restart grafana.
+Disabled old version if you have already installed the autohome-comparequeries-datasource plugin.
+
+Grafana --> Administration --> Plugins and data --> Plugins
+
+Find the old version plugin, and then Uninstall it.
+
+## Install with Grafana CLI
+
+If you install the plugin using the Grafana CLI, then you can follow the tuturial as below.
+
+### 1. Plugin download
+
+Download the zip file into a temp folder from github release page, like commands as below:
+
+```bash
+wget -c https://github.com/leoswing/autohome-compareQueries-datasource-rc/releases/download/1.0.0/autohome-comparequeries-datasource.zip
+```
+
+### 2. Install plugin with grafana-cli
+
+Install this plugin into Grafana plugins directory (default is `/var/lib/grafana/plugins` if you installed grafana using a package). 
+
+```bash
+sudo grafana-cli --pluginUrl autohome-comparequeries-datasource.zip plugins install autohome-comparequeries-datasource
+```
+
+### 3. Restart Grafana server
+
+You need to restart grafana server when previous steps are done. And then Restart grafana.
+
+```bash
+sudo service grafana-server restart
+```
+
+## Install with docker image
+
+If you install the plugin inside the docker image, then you can follow the document as below.
+
+### Custom Dockerfile
+
+Custom Dockerfile contents as follows:
+
+```ini
+# Using your node image version, eg. Node 14
+FROM node:14-alpine AS build-stage
+WORKDIR /plugins
+COPY ./plugins/autohome-comparequeries-datasource.zip autohome-comparequeries-datasource.zip
+
+RUN \
+  unzip autohome-comparequeries-datasource.zip && \
+  rm -rf autohome-comparequeries-datasource.zip
+
+# Using your base grafana version
+FROM grafana/grafana:10.4.2
+
+# Disable Login form or not
+ENV GF_AUTH_DISABLE_LOGIN_FORM "false"
+# Allow anonymous authentication or not
+ENV GF_AUTH_ANONYMOUS_ENABLED "false"
+# Role of anonymous user
+ENV GF_AUTH_ANONYMOUS_ORG_ROLE "Admin"
+# Install plugins here our in your own config file
+# ENV GF_INSTALL_PLUGINS="<list of plugins seperated by ,"
+
+# Add configuration file
+ADD ./grafana.ini /etc/grafana/grafana.ini
+
+RUN chmod -R 755 /var/lib/grafana/plugins/
+
+COPY --from=build-stage /plugins/ /var/lib/grafana/plugins/autohome-comparequeries-datasource
+```
 
 ## Grafana container config
 
 Installing CompareQueries Grafana datasource [requires](https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/#allow_loading_unsigned_plugins)
-the following changes to Grafana's `grafana.ini` config:
+the following secion changes to Grafana's `grafana.ini` config:
 
 ``` ini
 [plugins]
@@ -43,94 +114,20 @@ For `grafana-operator` users, please adjust `config:` section in your `kind=Graf
 
 ## Datasource plugin usage
 
-- Create a data source of type CompareQueries.
-- Create a basic query
-- Create a comparison query based on the base query.
-- Increase the time of comparison query in comparison query.
+Step 1. Create a data source of your type based on your demand, such as Elasticsearch.
+
+Step 2. Create a data source of type CompareQueries. Grafana --> Connections --> Data sources --> Add new data source， then type 'compare' to use CompareQueries plugin
+
+![Screenshot-create-db](./img/create-db.png)
+
+Step 3. Create a basic query using your database, such as Elasticsearch.
+
+Step 4. Create a comparison query based on the base query.
+Step 5. Increase the time of comparison query in comparison query.
+
+![Screenshot-usage-comparequeries](./img/usage-comparequeries.png)
 
 
-# Development
-> For Grafana plugin developer only
+# Developer guide
 
-For Grafana developers, follow the instructions as below.
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Build plugin in development mode and run in watch mode
-
-   ```bash
-   npm run dev
-   ```
-
-3. Build plugin in production mode
-
-   ```bash
-   npm run build
-   ```
-
-4. Run the tests (using Jest)
-
-   ```bash
-   # Runs the tests and watches for changes, requires git init first
-   npm run test
-
-   # Exits after running all the tests
-   npm run test:ci
-   ```
-
-5. Spin up a Grafana instance and run the plugin inside it (using Docker)
-
-   ```bash
-   npm run server
-   ```
-
-6. Run the E2E tests (using Cypress)
-
-   ```bash
-   # Spins up a Grafana instance first that we tests against
-   npm run server
-
-   # Starts the tests
-   npm run e2e
-   ```
-
-7. Run the linter
-
-   ```bash
-   npm run lint
-
-   # or
-
-   npm run lint:fix
-   ```
-
-
-## Learn more
-
-Below you can find source code for existing app plugins and other related documentation.
-
-- [Basic data source plugin example](https://github.com/grafana/grafana-plugin-examples/tree/master/examples/datasource-basic#readme)
-- [`plugin.json` documentation](https://grafana.com/developers/plugin-tools/reference/plugin-json)
-- [How to sign a plugin?](https://grafana.com/developers/plugin-tools/publish-a-plugin/sign-a-plugin)
-
-
-## Q & A
-
-Run the following commands to get started:
-
-```bash
-    * cd ./autohome-compareQueries-datasource-rc
-    * npm install to install frontend dependencies.
-    * npm exec playwright install chromium to install e2e test dependencies.
-    * npm run dev to build (and watch) the plugin frontend code.
-    * docker-compose up to start a grafana development server.
-    * Open http://localhost:3000 in your browser to create a dashboard to begin developing your plugin.
-```
-
-Note: We strongly recommend creating a new Git repository by running git init in ./autohome-compareQueries-datasource-rc before continuing.
-
-    * Learn more about Grafana Plugin Development at https://grafana.com/developers/plugin-tools
+If you want to get started developing with this Grafana plugin, refer to the [developer-guild](./developer-guide.md)
