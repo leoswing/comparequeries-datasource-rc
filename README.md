@@ -128,7 +128,7 @@ Step 2. Create a data source of type CompareQueries. Grafana --> Connections -->
 Step 3. Create a basic query using your database, such as Elasticsearch.
 
 Step 4. Create a comparison query based on the base query.
-Step 5. Increase the time of comparison query in comparison query.
+Step 5. Increase the time of comparison query in comparison query, Time shift supports：s(second), m(minute), h(hour), d(day), w(week), M(month), y(year)
 
 ![Screenshot-usage-comparequeries](./img/usage-comparequeries.png)
 
