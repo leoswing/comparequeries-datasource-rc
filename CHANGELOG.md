@@ -1,3 +1,9 @@
+# 1.1.0 (2024-06-20)
+
+### Features and enhancements
+
+- Suit with Grafana 11, remove filterQuery method as it should migrate, see [PR](https://github.com/leoswing/autohome-compareQueries-datasource-rc/pull/1)
+
 # 1.0.0 (2024-06-18)
 
 Restructure repo with React based framework support.
