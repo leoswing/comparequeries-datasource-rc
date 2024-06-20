@@ -36,11 +36,6 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     return DEFAULT_QUERY;
   }
 
-  filterQuery(query: CompareQueriesQuery): boolean {
-    // if no query has been provided, prevent the query from being executed
-    return !!query.target;
-  }
-
   getValueFieldName(line: DataFrame) {
     try {
       const valueField = line.fields?.find((field: any) => field.type === FieldType.number);
