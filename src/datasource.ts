@@ -113,7 +113,6 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     _.forEach(targets, (target) => {
       let query = target.query;
 
-      // TODO: 添加undefined判断
       if (query === null || query === '' || querys[query] === null || !query || !querys[query]) {
         return;
       }
@@ -134,7 +133,6 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
             let comparePromise = _this.datasourceSrv
               .get(compareDsName)
               .then((compareDs: any) => {
-                // TODO: 暂时不相等配置，
                 if (compareDs.meta.id === _this.meta.id) {
                   return { data: [] };
                 }
