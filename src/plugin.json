@@ -14,7 +14,8 @@
   "info": {
     "description": "Grafana plugin built as a datasource plugin that combines and contrasts different time shifts data.",
     "author": {
-      "name": "Mit"
+      "name": "leoswing",
+      "url": "https://github.com/leoswing/autohome-compareQueries-datasource-rc"
     },
     "keywords": [
       "datasource",

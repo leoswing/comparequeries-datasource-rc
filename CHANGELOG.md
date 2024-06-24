@@ -1,3 +1,13 @@
+# 1.2.0 (2024-06-24)
+
+### Features and enhancements
+
+- Upgrade QueryEditor data binding logics from query property
+
+### Bug fixes
+
+- Fix QueryEditor data model timeShifts lost when refresh issue [#2](https://github.com/leoswing/autohome-compareQueries-datasource-rc/issues/2)
+
 # 1.1.0 (2024-06-20)
 
 ### Features and enhancements
