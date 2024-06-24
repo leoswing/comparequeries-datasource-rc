@@ -1,5 +1,4 @@
 import {
-  CoreApp,
   DataQueryRequest,
   DataQueryResponse,
   DataSourceApi,
@@ -11,7 +10,7 @@ import {
 } from '@grafana/data';
 import { getDataSourceSrv, DataSourceSrv, getTemplateSrv, TemplateSrv } from '@grafana/runtime';
 
-import { CompareQueriesQuery, CompareQueriesOptions, DEFAULT_QUERY } from './types';
+import { CompareQueriesQuery, CompareQueriesOptions } from './types';
 import _ from 'lodash';
 // eslint-disable-next-line no-restricted-imports
 import moment from 'moment';
@@ -30,10 +29,6 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     this.meta = instanceSettings.meta;
     this.datasourceSrv = getDataSourceSrv();
     this.templateSrv = getTemplateSrv();
-  }
-
-  getDefaultQuery(_: CoreApp): Partial<CompareQueriesQuery> {
-    return DEFAULT_QUERY;
   }
 
   getValueFieldName(line: DataFrame) {

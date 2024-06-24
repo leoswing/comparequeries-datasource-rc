@@ -2,15 +2,18 @@ import { DataSourceJsonData } from '@grafana/data';
 import { DataQuery } from '@grafana/schema';
 
 export interface CompareQueriesQuery extends DataQuery {
-  query: any;
-  target: any;
+  query: string;
+  timeShifts: any[];
   aliasTypes: string[];
   units: string[];
+  process: boolean;
 }
 
-export const DEFAULT_QUERY: Partial<CompareQueriesQuery> = {
+export const defaultQuery: Partial<CompareQueriesQuery> = {
   aliasTypes: ['suffix', 'prefix', 'absolute'],
   units: ['y', 'M', 'w', 'd', 'h', 'm', 's'],
+  timeShifts: [{ id: 0 }],
+  process: true,
 };
 
 export interface DataPoint {
@@ -23,11 +26,10 @@ export interface DataSourceResponse {
 }
 
 /**
- * These are options configured for each DataSource instance
+ * These are options configured for each DataSource config instance
  */
 export interface CompareQueriesOptions extends DataSourceJsonData {
-  meta?: string | any;
-  units?: string[];
+  timeInterval?: string;
 }
 
 /**

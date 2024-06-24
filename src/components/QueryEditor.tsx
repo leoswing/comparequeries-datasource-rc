@@ -1,9 +1,10 @@
-import React, { ChangeEvent, useEffect, useState, useRef } from 'react';
+import React, { ChangeEvent, useRef } from 'react';
 import _ from 'lodash';
+import defaults from 'lodash/defaults';
 import { InlineField, InlineFieldRow, HorizontalGroup, InlineSwitch } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from '../datasource';
-import { CompareQueriesOptions, CompareQueriesQuery } from '../types';
+import { CompareQueriesOptions, CompareQueriesQuery, defaultQuery } from '../types';
 
 type Props = QueryEditorProps<DataSource, CompareQueriesQuery, CompareQueriesOptions>;
 
@@ -14,42 +15,14 @@ interface TimeShiftLineOptions {
 }
 
 export function QueryEditor({ query, onChange, onRunQuery }: Props) {
-  let [target, setTarget] = useState<any>({
-    timeShifts: [],
-    process: true,
-  });
   const lastRunValueRef = useRef<Record<string, any> | null>(null);
 
   const aliasTypes = ['suffix', 'prefix', 'absolute'];
-
-  useEffect(() => {
-    // custom codes
-    if (!target || !target.timeShifts) {
-      setTarget({
-        ...target,
-        timeShifts: [],
-      });
-    }
-    if (target.timeShifts.length === 0) {
-      addTimeShifts();
-    }
-    if (typeof target.process === 'undefined') {
-      setTarget({
-        ...target,
-        process: true,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target]);
+  let target: Record<string, any> = defaults(query, defaultQuery);
 
   // Query refId change event
   const onQueryRefChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const updated = {
-      ...target,
-      query: event.target.value,
-    };
-
-    setTarget(updated);
+    target.query = event.target.value;
   };
 
   /**
@@ -58,14 +31,9 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
    * @param {ChangeEvent<any>} event
    */
   const onProcessChange = (event: ChangeEvent<any>) => {
-    const updated = {
-      ...target,
-      process: event.target.checked,
-    };
+    target.process = event.target.checked;
 
-    setTarget(updated);
-
-    onChange({ ...query, ...updated });
+    onChange({ ...query, ...target });
     onRunQuery();
   };
 
@@ -77,7 +45,6 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
    */
   const onChangeHandler = (key: string, timeShiftLine: TimeShiftLineOptions) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { jsonData: { id: sourceLineId = '' } = {} } = timeShiftLine || {};
-
     const changedTimeShift = target.timeShifts.map((item: any)=> {
       if (item.id === sourceLineId) {
         return {
@@ -89,10 +56,9 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
       }
     });
 
-    setTarget({
-      ...target,
-      timeShifts: changedTimeShift,
-    });
+    target.timeShifts = changedTimeShift;
+
+    onChange({ ...query, ...target });
   };
 
   /**
@@ -114,26 +80,14 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     }
   };
 
-  // @ts-ignore
-  // const onChangeInternal = () => {
-  //   onRunQuery();
-  // };
-
   /**
    * Add timeShift line
    */
   const addTimeShifts = () => {
     let id = getTimeShiftId();
+    target.timeShifts.push({ id });
 
-    const updated = {
-      ...target,
-      timeShifts: [
-        ...target.timeShifts,
-        {id: id},
-      ]
-    };
-
-    setTarget(updated);
+    onChange({ ...query, ...target });
   };
 
   /**
@@ -150,15 +104,9 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
       item.id !== timeShift.id
     );
 
-    const updated = {
-      ...target,
-      timeShifts: timeShiftsUpdated,
-    };
+    target.timeShifts = timeShiftsUpdated;
 
-    setTarget(updated);
-
-    onChange({ ...query, ...updated });
-
+    onChange({ ...query, ...target });
     onRunQuery();
   };
 
@@ -207,7 +155,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
       <HorizontalGroup>
         <InlineFieldRow>
           {
-            target.timeShifts.map((timeShift: any) => {
+            target.timeShifts?.map((timeShift: any) => {
               return (
                 <div className="gf-form" key={timeShift}>
                   <span className="gf-form-label">
