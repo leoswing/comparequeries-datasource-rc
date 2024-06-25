@@ -13,7 +13,7 @@ The open-source platform for monitoring and observability, and compare ability u
 
 Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/), we have improments as below:
 
-- Grafana 11 support, and signed public with id `leoswing-comparequeries-datasource`
+- Grafana 11 support, and signed public with id `leoswing-comparequeries-datasource`, and it's now waiting for reviewing.
 - Restructure codebase with React-based, which could refer to the [tutorial](https://grafana.com/developers/plugin-tools/tutorials/build-a-data-source-plugin)
 - Solve data point undefined issue when no database is selected.
 - Add alias name as displayName support.
@@ -25,7 +25,7 @@ Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCor
 
 # Breaking changes
 
-- This plugin has refactor the plugin id with `leoswing-comparequeries-datasource`, and signed in Grafana with public signature level.
+- This plugin has refactor the plugin id with `leoswing-comparequeries-datasource`, and signed in Grafana with public signature level, it's now waiting for reviewing..
 
 # Install
 
