@@ -6,13 +6,13 @@
 
 ### Bug fixes
 
-- Fix QueryEditor data model timeShifts lost when refresh issue [#2](https://github.com/leoswing/autohome-compareQueries-datasource-rc/issues/2)
+- Fix QueryEditor data model timeShifts lost when refresh issue [#2](https://github.com/leoswing/comparequeries-datasource-rc/issues/2)
 
 # 1.1.0 (2024-06-20)
 
 ### Features and enhancements
 
-- Suit with Grafana 11, remove filterQuery method as it should migrate, see [PR](https://github.com/leoswing/autohome-compareQueries-datasource-rc/pull/1)
+- Suit with Grafana 11, remove filterQuery method as it should migrate, see [PR](https://github.com/leoswing/comparequeries-datasource-rc/pull/1)
 
 # 1.0.0 (2024-06-18)
 

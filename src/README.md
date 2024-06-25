@@ -1,4 +1,4 @@
-[![CodeQL](https://github.com/leoswing/autohome-compareQueries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/autohome-compareQueries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml) ![](https://img.shields.io/github/v/release/leoswing/autohome-compareQueries-datasource-rc?style=plastic%253Flabel=repo)
+[![CodeQL](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml) ![](https://img.shields.io/github/v/release/leoswing/comparequeries-datasource-rc?style=plastic%253Flabel=repo)
 
 
 # CompareQueries datasource plugin
@@ -11,6 +11,7 @@ This datasource plugin provides compare ability with datasource support, and wit
 This plugin is based on [autohome-compareQueries-datasource](https://github.com/AutohomeCorp/autohome-compareQueries-datasource), while with React based framework support.
 
 - Suitable for Grafana 11.
+- Signed with id `leoswing-comparequeries-datasource`
 - Construct with React framework
 - Fix undefined data points issue
 - Add timeShift alias support
@@ -37,7 +38,7 @@ If you install the plugin using the Grafana CLI, then you can follow the tuturia
 Download the zip file into a temp folder from github release page, like commands as below:
 
 ```bash
-wget -c https://github.com/leoswing/compareQueries-datasource-rc/releases/download/2.0.0/leoswing-comparequeries-datasource.zip
+wget -c https://github.com/leoswing/comparequeries-datasource-rc/releases/download/2.0.0/leoswing-comparequeries-datasource.zip
 ```
 
 ### 2. Install plugin with grafana-cli

@@ -32,8 +32,8 @@ If you are running Grafana on Windows 10, we recommend installing the Windows Su
 
 We recommend using the Git command-line interface to download the source code for the Grafana plugin:
 
-1. Open a terminal and run `git clone https://github.com/leoswing/autohome-compareQueries-datasource-rc.git`. This command downloads Grafana plugin to a new `autohome-compareQueries-datasource-rc` directory in your current directory.
-1. Open the `autohome-compareQueries-datasource-rc` directory in your favorite code editor.
+1. Open a terminal and run `git clone https://github.com/leoswing/comparequeries-datasource-rc.git`. This command downloads Grafana plugin to a new `comparequeries-datasource-rc` directory in your current directory.
+1. Open the `comparequeries-datasource-rc` directory in your favorite code editor.
 
 For alternative ways of cloning the Grafana repository, refer to [GitHub's documentation](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/cloning-a-repository).
 
@@ -109,7 +109,7 @@ Below you can find source code for existing app plugins and other related docume
 Run the following commands to get started:
 
 ```bash
-    * cd ./autohome-compareQueries-datasource-rc
+    * cd ./comparequeries-datasource-rc
     * npm install to install frontend dependencies.
     * npm exec playwright install chromium to install e2e test dependencies.
     * npm run dev to build (and watch) the plugin frontend code.
@@ -117,6 +117,6 @@ Run the following commands to get started:
     * Open http://localhost:3000 in your browser to create a dashboard to begin developing your plugin.
 ```
 
-Note: We strongly recommend creating a new Git repository by running git init in ./autohome-compareQueries-datasource-rc before continuing.
+Note: We strongly recommend creating a new Git repository by running git init in ./comparequeries-datasource-rc before continuing.
 
     * Learn more about Grafana Plugin Development at https://grafana.com/developers/plugin-tools

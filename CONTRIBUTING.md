@@ -16,8 +16,8 @@ You can contribute to this Grafana plugin in several ways. Here are some example
 
 ### Report bugs
 
-Before submitting a new issue, try to make sure someone hasn't already reported the problem. Look through the [existing issues](https://github.com/leoswing/autohome-compareQueries-datasource-rc/issues) for similar issues.
+Before submitting a new issue, try to make sure someone hasn't already reported the problem. Look through the [existing issues](https://github.com/leoswing/comparequeries-datasource-rc/issues) for similar issues.
 
-Report a bug by submitting a [bug report](https://github.com/leoswing/autohome-compareQueries-datasource-rc/issues/new?labels=type%3A+bug&template=1-bug_report.md). Make sure that you provide as much information as possible on how to reproduce the bug.
+Report a bug by submitting a [bug report](https://github.com/leoswing/comparequeries-datasource-rc/issues/new?labels=type%3A+bug&template=1-bug_report.md). Make sure that you provide as much information as possible on how to reproduce the bug.
 
 Follow the issue template and add additional information that will help us replicate the problem.

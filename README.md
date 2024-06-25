@@ -1,4 +1,4 @@
-[![CodeQL](https://github.com/leoswing/autohome-compareQueries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/autohome-compareQueries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml) ![](https://img.shields.io/github/v/release/leoswing/autohome-compareQueries-datasource-rc?style=plastic%253Flabel=repo)
+[![CodeQL](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml) ![](https://img.shields.io/github/v/release/leoswing/comparequeries-datasource-rc?style=plastic%253Flabel=repo)
 
 # CompareQueries datasource plugin for Grafana
 
@@ -13,6 +13,7 @@ The open-source platform for monitoring and observability, and compare ability u
 
 Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/), we have improments as below:
 
+- Grafana 11 support, and signed public with id `leoswing-comparequeries-datasource`
 - Restructure codebase with React-based, which could refer to the [tutorial](https://grafana.com/developers/plugin-tools/tutorials/build-a-data-source-plugin)
 - Solve data point undefined issue when no database is selected.
 - Add alias name as displayName support.
@@ -22,6 +23,9 @@ Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCor
 
 ![Screenshot-func](./img/func-snapshot.png)
 
+# Breaking changes
+
+- This plugin has refactor the plugin id with `leoswing-comparequeries-datasource`, and signed in Grafana with public signature level.
 
 # Install
 
