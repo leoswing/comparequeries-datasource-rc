@@ -1,3 +1,11 @@
+# 2.0.0 (2024-06-25)
+
+### Breaking change
+
+- Refactor the plugin id with `leoswing-comparequeries-datasource`, and signed with public signature level in Grafana.
+- Repo name refactor to `comparequeries-datasource-rc`
+- Package.json name refactor to `leoswing-comparequeries-datasource`
+
 # 1.2.0 (2024-06-24)
 
 ### Features and enhancements
