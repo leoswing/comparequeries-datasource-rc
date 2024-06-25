@@ -5,6 +5,7 @@
 - Refactor the plugin id with `leoswing-comparequeries-datasource`, and signed with public signature level in Grafana.
 - Repo name refactor to `comparequeries-datasource-rc`
 - Package.json name refactor to `leoswing-comparequeries-datasource`
+- Release workflow publish the zip name to formate `${{ env.NAME }}-${{ env.TAG }}.zip`
 
 # 1.2.0 (2024-06-24)
 
