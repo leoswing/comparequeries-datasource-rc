@@ -38,7 +38,7 @@ If you install the plugin using the Grafana CLI, then you can follow the tuturia
 Download the zip file into a temp folder from github release page, like commands as below:
 
 ```bash
-wget -c https://github.com/leoswing/comparequeries-datasource-rc/releases/download/2.0.0/leoswing-comparequeries-datasource.zip
+wget -c https://github.com/leoswing/comparequeries-datasource-rc/releases/download/2.0.0/leoswing-comparequeries-datasource-2.0.0.zip
 ```
 
 ### 2. Install plugin with grafana-cli
@@ -46,7 +46,7 @@ wget -c https://github.com/leoswing/comparequeries-datasource-rc/releases/downlo
 Install this plugin into Grafana plugins directory (default is `/var/lib/grafana/plugins` if you installed grafana using a package). 
 
 ```bash
-sudo grafana-cli --pluginUrl leoswing-comparequeries-datasource.zip plugins install leoswing-comparequeries-datasource
+sudo grafana-cli --pluginUrl leoswing-comparequeries-datasource-2.0.0.zip plugins install leoswing-comparequeries-datasource
 ```
 
 ### 3. Restart Grafana server
@@ -69,11 +69,11 @@ Custom Dockerfile contents as follows:
 # Using your node image version, eg. Node 14
 FROM node:14-alpine AS build-stage
 WORKDIR /plugins
-COPY ./plugins/leoswing-comparequeries-datasource.zip leoswing-comparequeries-datasource.zip
+COPY ./plugins/leoswing-comparequeries-datasource-2.0.0.zip leoswing-comparequeries-datasource-2.0.0.zip
 
 RUN \
-  unzip leoswing-comparequeries-datasource.zip && \
-  rm -rf leoswing-comparequeries-datasource.zip
+  unzip leoswing-comparequeries-datasource-2.0.0.zip && \
+  rm -rf leoswing-comparequeries-datasource-2.0.0.zip
 
 # Using your base grafana version
 FROM grafana/grafana:10.4.2
