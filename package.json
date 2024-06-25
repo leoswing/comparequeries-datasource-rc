@@ -1,5 +1,5 @@
 {
-  "name": "autohome-comparequeries-datasource",
+  "name": "leoswing-comparequeries-datasource",
   "version": "1.2.0",
   "description": "Grafana plugin for compare queries",
   "scripts": {

@@ -10,7 +10,7 @@ on:
   # pull_request:
   #   types: [opened, reopened, synchronize]
 env:
-  NAME: autohome-comparequeries-datasource
+  NAME: leoswing-comparequeries-datasource
   TAG: ${{ github.event.release.tag_name }}
 jobs:
   release:
