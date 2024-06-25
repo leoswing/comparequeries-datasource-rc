@@ -5,7 +5,6 @@
 
   "metrics": true,
   "mixed": true,
-  "hiddenQueries": true,
   "annotations": false,
 
   "queryOptions": {
@@ -26,8 +25,22 @@
       "small": "img/logo.svg",
       "large": "img/logo.svg"
     },
-    "links": [],
-    "screenshots": [],
+    "links": [
+      {
+        "name": "Documentation",
+        "url": "https://github.com/leoswing/comparequeries-datasource-rc"
+      },
+      {
+        "name": "GitHub",
+        "url": "https://github.com/leoswing/comparequeries-datasource-rc"
+      }
+    ],
+    "screenshots": [
+      {
+        "name": "CompareQueries",
+        "path": "img/compare-func.png"
+      }
+    ],
     "version": "%VERSION%",
     "updated": "%TODAY%"
   },
