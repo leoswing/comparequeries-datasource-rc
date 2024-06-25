@@ -1,6 +1,9 @@
-# CompareQueries datasource plugin for Grafana
+[![CodeQL](https://github.com/leoswing/autohome-compareQueries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/autohome-compareQueries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml) ![](https://img.shields.io/github/v/release/leoswing/autohome-compareQueries-datasource-rc?style=plastic%253Flabel=repo)
 
-This datasource plugin allows you to query source with compare ability support, and with React upgrade support.
+
+# CompareQueries datasource plugin
+
+This datasource plugin provides compare ability with datasource support, and with React upgrade support.
 
 
 # Overview
@@ -19,7 +22,7 @@ This plugin is based on [autohome-compareQueries-datasource](https://github.com/
 
 > Only if you have already the old version plugin.
 
-Disabled old version if you have already installed the autohome-comparequeries-datasource plugin.
+Disabled old version if you have already installed the comparequeries-datasource plugin.
 
 Grafana --> Administration --> Plugins and data --> Plugins
 
@@ -34,7 +37,7 @@ If you install the plugin using the Grafana CLI, then you can follow the tuturia
 Download the zip file into a temp folder from github release page, like commands as below:
 
 ```bash
-wget -c https://github.com/leoswing/autohome-compareQueries-datasource-rc/releases/download/1.0.0/autohome-comparequeries-datasource.zip
+wget -c https://github.com/leoswing/compareQueries-datasource-rc/releases/download/2.0.0/leoswing-comparequeries-datasource.zip
 ```
 
 ### 2. Install plugin with grafana-cli
@@ -42,7 +45,7 @@ wget -c https://github.com/leoswing/autohome-compareQueries-datasource-rc/releas
 Install this plugin into Grafana plugins directory (default is `/var/lib/grafana/plugins` if you installed grafana using a package). 
 
 ```bash
-sudo grafana-cli --pluginUrl autohome-comparequeries-datasource.zip plugins install autohome-comparequeries-datasource
+sudo grafana-cli --pluginUrl leoswing-comparequeries-datasource.zip plugins install leoswing-comparequeries-datasource
 ```
 
 ### 3. Restart Grafana server
@@ -65,11 +68,11 @@ Custom Dockerfile contents as follows:
 # Using your node image version, eg. Node 14
 FROM node:14-alpine AS build-stage
 WORKDIR /plugins
-COPY ./plugins/autohome-comparequeries-datasource.zip autohome-comparequeries-datasource.zip
+COPY ./plugins/leoswing-comparequeries-datasource.zip leoswing-comparequeries-datasource.zip
 
 RUN \
-  unzip autohome-comparequeries-datasource.zip && \
-  rm -rf autohome-comparequeries-datasource.zip
+  unzip leoswing-comparequeries-datasource.zip && \
+  rm -rf leoswing-comparequeries-datasource.zip
 
 # Using your base grafana version
 FROM grafana/grafana:10.4.2
@@ -88,7 +91,7 @@ ADD ./grafana.ini /etc/grafana/grafana.ini
 
 RUN chmod -R 755 /var/lib/grafana/plugins/
 
-COPY --from=build-stage /plugins/ /var/lib/grafana/plugins/autohome-comparequeries-datasource
+COPY --from=build-stage /plugins/ /var/lib/grafana/plugins/leoswing-comparequeries-datasource
 ```
 
 ## Grafana container config
@@ -98,7 +101,7 @@ the following secion changes to Grafana's `grafana.ini` config:
 
 ``` ini
 [plugins]
-allow_loading_unsigned_plugins = autohome-comparequeries-datasource
+allow_loading_unsigned_plugins = leoswing-comparequeries-datasource
 ```
 
 For `grafana-operator` users, please adjust `config:` section in your `kind=Grafana` resource as below
@@ -106,7 +109,7 @@ For `grafana-operator` users, please adjust `config:` section in your `kind=Graf
 ```
   config:
     plugins:
-      allow_loading_unsigned_plugins: "autohome-comparequeries-datasource"
+      allow_loading_unsigned_plugins: "leoswing-comparequeries-datasource"
 ```
 
 ## Datasource plugin usage
@@ -116,7 +119,6 @@ Step 2. Create a data source of type CompareQueries. Grafana --> Connections -->
 Step 3. Create a basic query using your database, such as Elasticsearch.
 Step 4. Create a comparison query based on the base query.
 Step 5. Increase the time of comparison query in comparison query, Time shift supports：s(second), m(minute), h(hour), d(day), w(week), M(month), y(year)
-
 
 # Contributing
 
