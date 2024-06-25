@@ -116,10 +116,15 @@ For `grafana-operator` users, please adjust `config:` section in your `kind=Graf
 ## Datasource plugin usage
 
 Step 1. Create a data source of your type based on your demand, such as Elasticsearch.
-Step 2. Create a data source of type CompareQueries. Grafana --> Connections --> Data sources --> Add new data source， then type 'compare' to use CompareQueries plugin
+Step 2. Create a data source of type CompareQueries. Grafana --> Connections --> Data sources --> Add new data source， then type 'compare' to use CompareQueries plugin.
+
+![Screenshot-create-db](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/create-db.png)
+
 Step 3. Create a basic query using your database, such as Elasticsearch.
 Step 4. Create a comparison query based on the base query.
 Step 5. Increase the time of comparison query in comparison query, Time shift supports：s(second), m(minute), h(hour), d(day), w(week), M(month), y(year)
+
+![Screenshot-usage-comparequeries](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/usage-comparequeries.png)
 
 # Contributing
 
