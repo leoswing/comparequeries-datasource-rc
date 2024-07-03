@@ -3,44 +3,22 @@
 
 # Overview
 
-This data source plugin provides data comparison ability with other datasource query support, you can use custom time shift to query selected time range data in one graph.
+This data source plugin enables data comparison capabilities by supporting queries from multiple data sources. It allows you to use custom time shifts to display data from different time ranges within a single graph.
 
-- Suitable for Grafana 11.
-- Fix undefined data points issue
-- Add timeShift alias support
+Key features:
+
+• Compatible with Grafana 11
+• Resolves issues with undefined data points
+• Introduces support for timeShift aliases
 
 ![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
 
 # Quick start
 
-## Preparation
+Step 1. Create a data source with your type based on your demand, such as Elasticsearch.
 
-> Only if you have already the old version plugin.
-
-Disabled the old version if you have already installed this plugin.
-
-Grafana --> Administration --> Plugins and data --> Plugins
-
-Find the old version plugin, and then Uninstall it.
-
-
-## Grafana config
-
-Installing CompareQueries Grafana datasource [requires](https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/#allow_loading_unsigned_plugins)
-the following secion changes to Grafana's `grafana.ini` config:
-
-``` ini
-[plugins]
-allow_loading_unsigned_plugins = leoswing-comparequeries-datasource
-```
-
-
-## Datasource plugin usage
-
-Step 1. Create a data source of your type based on your demand, such as Elasticsearch.
-
-Step 2. Create a data source of type CompareQueries. Grafana --> Connections --> Data sources --> Add new data source， then type 'compare' to use CompareQueries plugin.
+Step 2. Create a data source with type CompareQueries. Grafana --> Connections --> Data sources --> Add new data source， then type 'compare' to use CompareQueries plugin.
 
 
 ![Screenshot-create-db](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/create-db.png)
@@ -48,8 +26,9 @@ Step 2. Create a data source of type CompareQueries. Grafana --> Connections -->
 
 Step 3. Create a basic query using your database, such as Elasticsearch.
 
-Step 4. Create a comparison query based on the base query.
+Step 4. Create a comparison query based on the basic query. To create multi-line time series, the query requires at least 2 fields in the following order:
 
-Step 5. Increase the time of comparison query in comparison query, Time shift supports：s(second), m(minute), h(hour), d(day), w(week), M(month), y(year)
+- field `Query`: `Query` field which refer to the basic query name
+- field `Amount`: `Amount` field with time range, time shift supports：s(second), m(minute), h(hour), d(day), w(week), M(month), y(year)
 
 ![Screenshot-usage-comparequeries](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/usage-comparequeries.png)

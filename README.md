@@ -1,43 +1,54 @@
 [![CodeQL](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml) ![](https://img.shields.io/github/v/release/leoswing/comparequeries-datasource-rc?style=plastic%253Flabel=repo)
 
-# CompareQueries datasource plugin for Grafana
+# Overview
 
-This datasource plugin allows you to query source with compare ability support，with React upgrade support. Solved issue [compareQueries#40](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/issues/40)
-
-The open-source platform for monitoring and observability, and compare ability upgrade.
+This data source plugin enables data comparison capabilities by supporting queries from multiple data sources. It allows you to use custom time shifts to display data from different time ranges within a single graph.
 
 [![License](https://img.shields.io/github/license/leoswing/comparequeries-datasource-rc)](LICENSE)
 ![Drone](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/release.yaml/badge.svg)
 
-# Overview
+Key features:
 
-Compare to the plugin [CompareQueries-datasource](https://github.com/AutohomeCorp/autohome-compareQueries-datasource/), we have improments as below:
-
-- Grafana 11 support, and signed public with id `leoswing-comparequeries-datasource`, and it's now waiting for reviewing.
-- Restructure codebase with React-based, which could refer to the [tutorial](https://grafana.com/developers/plugin-tools/tutorials/build-a-data-source-plugin)
-- Solve data point undefined issue when no database is selected.
-- Add alias name as displayName support.
+- Compatible with Grafana 11
+- Resolves issues with undefined data points
+- Introduces support for timeShift aliases
 - Cache datasource query result and reduce query reduction when query condtions remains the same.
 
-![Screenshot-conf](./img/conf-datasource.png)
+![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
-![Screenshot-func](./img/func-snapshot.png)
+
+# Installation
+
+For detailed instructions on how to install the plugin on Grafana Cloud or locally, please checkout the [Plugin installation docs](https://grafana.com/docs/grafana/latest/administration/plugin-management/).
+
+
+
+# Quick start
+
+Step 1. Create a data source with your type based on your demand, such as Elasticsearch.
+
+Step 2. Create a data source with type CompareQueries. Grafana --> Connections --> Data sources --> Add new data source， then type 'compare' to use CompareQueries plugin.
+
+
+![Screenshot-create-db](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/create-db.png)
+
+
+Step 3. Create a basic query using your database, such as Elasticsearch.
+
+Step 4. Create a comparison query based on the basic query. To create multi-line time series, the query requires at least 2 fields in the following order:
+
+- field `Query`: `Query` field which refer to the basic query name
+- field `Amount`: `Amount` field with time range value, time shift supports：s(second), m(minute), h(hour), d(day), w(week), M(month), y(year)
+
+
+![Screenshot-usage-comparequeries](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/usage-comparequeries.png)
+
 
 # Breaking changes
 
-- This plugin has refactor the plugin id with `leoswing-comparequeries-datasource`, and signed in Grafana with public signature level, it's now waiting for reviewing..
+- This plugin has refactor the plugin id with `leoswing-comparequeries-datasource`.
 
 # Install
-
-## Preparation
-
-> Only if you have already the old version plugin.
-
-Disabled old version if you have already installed the comparequeries-datasource plugin.
-
-Grafana --> Administration --> Plugins and data --> Plugins
-
-Find the old version plugin, and then Uninstall it.
 
 ## Install with Grafana CLI
 
