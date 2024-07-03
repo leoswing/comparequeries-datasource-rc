@@ -1,9 +1,10 @@
-import React, { ChangeEvent, useRef } from 'react';
+import React, { ChangeEvent, useRef, FormEventHandler } from 'react';
 import _ from 'lodash';
 import defaults from 'lodash/defaults';
-import { InlineField, InlineFieldRow, HorizontalGroup, InlineSwitch } from '@grafana/ui';
+import { InlineField, InlineFieldRow, HorizontalGroup, InlineSwitch, Input, Select } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from '../datasource';
+import { TIMESHIFT_FORMAT_REG } from '../config';
 import { CompareQueriesOptions, CompareQueriesQuery, defaultQuery } from '../types';
 
 type Props = QueryEditorProps<DataSource, CompareQueriesQuery, CompareQueriesOptions>;
@@ -23,6 +24,9 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
   // Query refId change event
   const onQueryRefChange = (event: ChangeEvent<HTMLInputElement>) => {
     target.query = event.target.value;
+
+    // fix input query ref change
+    onChange({ ...query, ...target });
   };
 
   /**
@@ -43,13 +47,33 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
    * @param {string} key timeShift line input field
    * @param {TimeShiftLineOptions} timeShiftLine 对应的timeShift line 编辑查询配置
    */
-  const onChangeHandler = (key: string, timeShiftLine: TimeShiftLineOptions) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const onChangeHandler = (key: string, timeShiftLine: TimeShiftLineOptions): FormEventHandler<any> | any => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { jsonData: { id: sourceLineId = '' } = {} } = timeShiftLine || {};
+
     const changedTimeShift = target.timeShifts.map((item: any)=> {
       if (item.id === sourceLineId) {
         return {
           ...item,
           [key]: event.target.value,
+        };
+      } else {
+        return item;
+      }
+    });
+
+    target.timeShifts = changedTimeShift;
+
+    onChange({ ...query, ...target });
+  };
+
+  const onAliasTypeChange = (value: string, timeShiftLine: TimeShiftLineOptions): FormEventHandler<any> | any => {
+    const { jsonData: { id: sourceLineId = '' } = {} } = timeShiftLine || {};
+
+    const changedTimeShift = target.timeShifts.map((item: any)=> {
+      if (item.id === sourceLineId) {
+        return {
+          ...item,
+          aliasType: value,
         };
       } else {
         return item;
@@ -131,18 +155,19 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
       <div className="gf-form-inline">
         <InlineFieldRow>
           <div className="gf-form">
-            <label className='gf-form-label query-keyword width-4'>
-              Query
-            </label>
-            <input
-              type="text"
-              className="gf-form-input"
-              spellCheck="false"
-              value={target.query}
-              placeholder="query"
-              onChange={onQueryRefChange}
-              onBlur={handleBlur}
-            />
+            <InlineField
+              label='Query'
+              className='query-keyword'
+              labelWidth={8}
+            >
+              <Input
+                spellCheck={false}
+                placeholder='query'
+                value={target.query}
+                onChange={onQueryRefChange}
+                onBlur={handleBlur}
+              />
+            </InlineField>
 
             <InlineField label="Process TimeShift" className='width-12'>
               <InlineSwitch value={target.process} onChange={onProcessChange}/>
@@ -162,48 +187,57 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                     <i className="fa fa-clock-o"></i>
                   </span>
                   <span className="gf-form-label width-6">Time shift</span>
-                  <span className="gf-form-label width-4">Amount</span>
 
-                  <input
-                    type="text"
-                    className="gf-form-input max-width-8"
-                    placeholder="1h"
-                    value={timeShift.value}
-                    onChange={onChangeHandler('value', { jsonData: timeShift })}
-                    onBlur={handleBlur}
-                  />
-
-                  <span className="gf-form-label width-4">alias</span>
-                  <input
-                    type="text"
-                    className="gf-form-input max-width-8"
-                    placeholder="auto"
-                    value={timeShift.alias}
-                    onChange={onChangeHandler('alias', { jsonData: timeShift })}
-                    onBlur={handleBlur}
-                  />
-
-                  <span className="gf-form-label width-6">alias type</span>
-                  <div className="gf-form-select-wrapper">
-                    <select 
-                    className="gf-form-input"
-                    defaultValue={'suffix'}
-                    value={timeShift.aliasType || 'suffix'}
-                    onChange={onChangeHandler('aliasType', { jsonData: timeShift })}
-                    onBlur={handleBlur}
+                  <InlineField
+                    labelWidth={8}
+                    label='Amount'
+                    invalid={timeShift.value && !TIMESHIFT_FORMAT_REG.test(timeShift.value)}
+                    error={timeShift.value && !TIMESHIFT_FORMAT_REG.test(timeShift.value) ? 'Amount format is invalid' : ''}
                   >
-                      {aliasTypes.map(val => (<option value={val} key={val}>{val}</option>))}
-                    </select>
-                  </div>
+                    <Input
+                      className='width-8'
+                      placeholder='1h'
+                      value={timeShift.value}
+                      required
+                      onChange={onChangeHandler('value', { jsonData: timeShift })} onBlur={handleBlur}
+                    />
+                  </InlineField>
+
+                  <InlineField
+                    label="alias"
+                    labelWidth={8}
+                  >
+                    <Input
+                      className='width-8'
+                      placeholder='auto'
+                      value={timeShift.alias}
+                      onChange={onChangeHandler('alias', { jsonData: timeShift })}
+                      onBlur={handleBlur}
+                    />
+                  </InlineField>
+
+                  <InlineField
+                    label='alias type'
+                    labelWidth={12}
+                  >
+                    <Select
+                      className='width-7'
+                      defaultValue={'suffix'}
+                      value={timeShift.aliasType || 'suffix'}
+                      onChange={({ value }) => onAliasTypeChange(value, { jsonData: timeShift })}
+                      onBlur={handleBlur}
+                      options={aliasTypes.map(val => ({value: val, label: val}))}
+                    />
+                  </InlineField>
 
                   <span className="gf-form-label width-4" title="only valid when alias type is suffix or prefix">delimiter</span>
-                  <input disabled={timeShift.aliasType === 'absolute'}
-                    type="text"
-                    className="gf-form-input max-width-8"
-                    placeholder="default:_"
-                    value={timeShift.delimiter}
-                    onChange={onChangeHandler('delimiter', { jsonData: timeShift })}
-                    onBlur={handleBlur}
+                  <Input
+                      disabled={timeShift.aliasType === 'absolute'}
+                      className='width-8'
+                      placeholder='default:_'
+                      value={timeShift.delimiter}
+                      onChange={onChangeHandler('delimiter', { jsonData: timeShift })}
+                      onBlur={handleBlur}
                   />
 
                   {

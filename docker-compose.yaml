@@ -9,6 +9,7 @@ services:
         grafana_image: ${GRAFANA_IMAGE:-grafana}
         # grafana_version: ${GRAFANA_VERSION:-10.4.2}
         grafana_version: ${GRAFANA_VERSION:-11.0.0}
+        # grafana_version: ${GRAFANA_VERSION:-7.5.0}
         development: ${DEVELOPMENT:-false}
     ports:
       - 3000:3000/tcp

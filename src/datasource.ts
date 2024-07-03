@@ -14,6 +14,7 @@ import { CompareQueriesQuery, CompareQueriesOptions } from './types';
 import _ from 'lodash';
 // eslint-disable-next-line no-restricted-imports
 import moment from 'moment';
+import { TIMESHIFT_FORMAT_REG } from './config';
 
 export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQueriesOptions> {
   id: number;
@@ -135,7 +136,7 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
                 timeShiftValue = _this.templateSrv.replace(timeShift.value, options.scopedVars);
                 timeShiftAlias = _this.templateSrv.replace(timeShift.alias, options.scopedVars) || timeShiftValue;
 
-                if (timeShiftValue === null || timeShiftValue === '' || typeof timeShiftValue === 'undefined') {
+                if (timeShiftValue === null || timeShiftValue === '' || typeof timeShiftValue === 'undefined' || !TIMESHIFT_FORMAT_REG.test(timeShiftValue)) {
                   return { data: [] };
                 }
 
