@@ -1,0 +1,34 @@
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+{
+  "manifestVersion": "2.0.0",
+  "signatureType": "community",
+  "signedByOrg": "leoswing",
+  "signedByOrgName": "leoswing",
+  "plugin": "leoswing-comparequeries-datasource",
+  "version": "2.0.0",
+  "time": 1720050303094,
+  "keyId": "7e4d0c6a708866e7",
+  "files": {
+    "LICENSE": "c5accbbd8546e94c34aed24afe689a617627d18eed5a6c48277e48db57c23851",
+    "CHANGELOG.md": "917d010dd407e5b87e3bb91e7194f8ca6baf3aca3fede5f18da2cf2d6785c01d",
+    "plugin.json": "b3cbbbb96dd9fd742ac8e95a1cedf3691912961229780657917730280791340f",
+    "README.md": "ff4440ca5a8fb6544889cf5a4109a8abfa3c9c8df2ff244c0ea3d0d018e53d25",
+    "img/compare-func.png": "173418d269e900c6e13d3d5181d8f1cd3ec70a627a28b450260ca196cc522702",
+    "img/logo.svg": "0ccafc7258fcb2cdbf41452b81a632326415626986dfc35ba8413beb29ac2d04",
+    "module.js": "065c870b3bfca443e579535cf8dec03e4c4a8be355ef0ddddcd03b13adef132c"
+  }
+}
+-----BEGIN PGP SIGNATURE-----
+Version: OpenPGP.js v4.10.11
+Comment: https://openpgpjs.org
+
+wrkEARMKAAYFAmaF4n8AIQkQfk0ManCIZucWIQTzOyW2kQdOhGNlcPN+TQxq
+cIhm576gAgkAapwUVvnWf4CESvsWDpg3A3pZXx3Ab2cL0PXn+8f9eZGrQ8ke
+R0WdFaO60D1IUmUetsm/GHOgOBlT5oqO972zYEwCCQDLoKGFsuCLcFzMQQF+
+izlZZDDNfUg/dQjk3mUg+Am8+u6Bre4eDHxHUkXeEvNlBTENj+ctRhlvUiqj
++Kx7G2M7WQ==
+=ptNd
+-----END PGP SIGNATURE-----
