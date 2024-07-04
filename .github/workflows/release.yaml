@@ -12,6 +12,7 @@ on:
 env:
   NAME: leoswing-comparequeries-datasource
   TAG: ${{ github.event.release.tag_name }}
+  GRAFANA_ACCESS_POLICY_TOKEN: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
 jobs:
   release:
     name: Release
@@ -40,6 +41,9 @@ jobs:
         run: |
           npm install
           npm run build
+      - name: Sign plugin
+        run: npx --yes @grafana/sign-plugin@latest
+        if: ${{ env.GRAFANA_ACCESS_POLICY_TOKEN != '' }}
       - name: Build ZIP
         run: |
           cp -r ./dist ./${{ env.NAME }} && zip ${{ env.NAME }}-${{ env.TAG }}.zip ${{ env.NAME }} -r && rm -rf ${{ env.NAME }}
