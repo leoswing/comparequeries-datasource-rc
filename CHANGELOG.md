@@ -1,3 +1,17 @@
+# 2.0.2 (2024-07-10)
+
+## Bug fixes
+
+- Fix `Amount` field validation issue when using with variable inside
+
+# 2.0.1 (2024-07-04)
+
+### Features and enhancements
+
+- Add validation for amount input field
+- Sign plugin in Grafana plugin market, [plugin details](https://grafana.com/grafana/plugins/leoswing-comparequeries-datasource/)
+- Add plugin sign github action config
+
 # 2.0.0 (2024-06-25)
 
 ### Breaking change
