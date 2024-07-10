@@ -4,7 +4,7 @@ import defaults from 'lodash/defaults';
 import { InlineField, InlineFieldRow, HorizontalGroup, InlineSwitch, Input, Select } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from '../datasource';
-import { TIMESHIFT_FORMAT_REG } from '../config';
+import { TIMESHIFT_FORMAT_REG, TIMESHIFT_VAR_FORMAT_REG } from '../config';
 import { CompareQueriesOptions, CompareQueriesQuery, defaultQuery } from '../types';
 
 type Props = QueryEditorProps<DataSource, CompareQueriesQuery, CompareQueriesOptions>;
@@ -150,6 +150,10 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     }
   };
 
+  const isInvalidAmount = (amountValue: string) => {
+    return !TIMESHIFT_FORMAT_REG.test(amountValue) && !TIMESHIFT_VAR_FORMAT_REG.test(amountValue)
+  };
+
   return (
     <div>
       <div className="gf-form-inline">
@@ -191,8 +195,8 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
                   <InlineField
                     labelWidth={8}
                     label='Amount'
-                    invalid={timeShift.value && !TIMESHIFT_FORMAT_REG.test(timeShift.value)}
-                    error={timeShift.value && !TIMESHIFT_FORMAT_REG.test(timeShift.value) ? 'Amount format is invalid' : ''}
+                    invalid={timeShift.value && isInvalidAmount(timeShift.value)}
+                    error={timeShift.value && isInvalidAmount(timeShift.value) ? 'Amount format is invalid' : ''}
                   >
                     <Input
                       className='width-8'
