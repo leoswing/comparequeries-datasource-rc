@@ -171,7 +171,7 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
                       if (field.name) {
                         const valueFieldName = _this.getValueFieldName(line);
                         const inputName = field.type === FieldType.number && valueFieldName ? valueFieldName : field.name;
-                        field.name = _this.generalAlias(inputName, timeShiftAlias, aliasType, delimiter);
+                        field.type === FieldType.number && (field.name = _this.generalAlias(inputName, timeShiftAlias, aliasType, delimiter));
                       }
 
                       if (field.config && field.config.displayName) {
