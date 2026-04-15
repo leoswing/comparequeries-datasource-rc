@@ -24,3 +24,4 @@ services:
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: leoswing-comparequeries-datasource
+      GF_PLUGIN_APP_URL: http://localhost:3000

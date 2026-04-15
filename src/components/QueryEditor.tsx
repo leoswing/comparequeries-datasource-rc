@@ -1,7 +1,7 @@
-import React, { ChangeEvent, useRef, FormEventHandler } from 'react';
+import React, { ChangeEvent, useRef, useState, FormEventHandler } from 'react';
 import _ from 'lodash';
 import defaults from 'lodash/defaults';
-import { InlineField, InlineSwitch, Input, Select, Button, Icon, useStyles2 } from '@grafana/ui';
+import { InlineField, InlineSwitch, Input, Select, Button, Icon, Collapse, TextArea, useStyles2 } from '@grafana/ui';
 import { QueryEditorProps, GrafanaTheme2 } from '@grafana/data';
 import { css } from '@emotion/css';
 import { DataSource } from '../datasource';
@@ -164,6 +164,27 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     return !TIMESHIFT_FORMAT_REG.test(amountValue) && !TIMESHIFT_VAR_FORMAT_REG.test(amountValue)
   };
 
+  const [alertingOpen, setAlertingOpen] = useState(!!target.datasourceUid);
+
+  const onDatasourceUidChange = (event: ChangeEvent<HTMLInputElement>) => {
+    target.datasourceUid = event.target.value;
+    onChange({ ...query, ...target });
+  };
+
+  const onDatasourceTypeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    target.datasourceType = event.target.value;
+    onChange({ ...query, ...target });
+  };
+
+  const onTargetQueryJSONChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    try {
+      target.targetQueryJSON = JSON.parse(event.target.value);
+    } catch {
+      target.targetQueryJSON = event.target.value as any;
+    }
+    onChange({ ...query, ...target });
+  };
+
   const styles = useStyles2(getStyles);
 
   return (
@@ -260,6 +281,69 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
       </div>
 
       <Button variant='secondary' icon='plus' className={styles.addButton} onClick={addTimeShifts}>Add time shift</Button>
+
+      <Collapse
+        label="Alerting Configuration (Backend Mode)"
+        isOpen={alertingOpen}
+        onToggle={() => setAlertingOpen(!alertingOpen)}
+        collapsible
+      >
+        <div style={{ padding: '8px 0' }}>
+          <p style={{ color: '#8e8e8e', fontSize: 12, marginBottom: 8 }}>
+            Configure these fields to enable Grafana Alerting. The backend will proxy queries directly to the target datasource with time-shifted ranges.
+            For normal dashboard panel usage, these fields can be left empty.
+          </p>
+
+          <InlineField
+            label="Target Datasource UID"
+            labelWidth={22}
+            tooltip="The UID of the datasource to query (find it in datasource settings URL or via API)"
+          >
+            <Input
+              width={30}
+              placeholder="e.g. prometheus-uid"
+              value={target.datasourceUid || ''}
+              onChange={onDatasourceUidChange}
+              onBlur={handleBlur}
+            />
+          </InlineField>
+
+          <InlineField
+            label="Datasource Type"
+            labelWidth={22}
+            tooltip="The type identifier of the target datasource (e.g. prometheus, loki, influxdb)"
+          >
+            <Input
+              width={30}
+              placeholder="e.g. prometheus"
+              value={target.datasourceType || ''}
+              onChange={onDatasourceTypeChange}
+              onBlur={handleBlur}
+            />
+          </InlineField>
+
+          <InlineField
+            label="Target Query JSON"
+            labelWidth={22}
+            tooltip='Full query payload as JSON for the target datasource, e.g. {"expr": "up", "legendFormat": "{{instance}}"}'
+          >
+            <TextArea
+              cols={60}
+              rows={4}
+              placeholder='{"expr": "rate(http_requests_total[5m])", "legendFormat": "{{instance}}"}'
+              value={
+                target.targetQueryJSON
+                  ? (typeof target.targetQueryJSON === 'string'
+                    ? target.targetQueryJSON
+                    : JSON.stringify(target.targetQueryJSON, null, 2))
+                  : ''
+              }
+              onChange={onTargetQueryJSONChange}
+              onBlur={handleBlur}
+            />
+          </InlineField>
+        </div>
+      </Collapse>
     </div>
   );
 }

@@ -7,6 +7,13 @@ export interface CompareQueriesQuery extends DataQuery {
   aliasTypes: string[];
   units: string[];
   process: boolean;
+
+  /** Target datasource UID — required for backend/alerting mode */
+  datasourceUid?: string;
+  /** Target datasource type (e.g. "prometheus") — used by backend proxy */
+  datasourceType?: string;
+  /** Full query JSON to send to the target datasource in backend mode */
+  targetQueryJSON?: Record<string, any>;
 }
 
 export const defaultQuery: Partial<CompareQueriesQuery> = {
@@ -30,11 +37,15 @@ export interface DataSourceResponse {
  */
 export interface CompareQueriesOptions extends DataSourceJsonData {
   timeInterval?: string;
+  /** Grafana instance URL for backend proxy queries (e.g. http://localhost:3000) */
+  grafanaUrl?: string;
 }
 
 /**
- * Value that is used in the backend, but never sent over HTTP to the frontend
+ * Secure values stored encrypted by Grafana, never sent to the frontend in plain text
  */
 export interface CompareQueriesJsonData {
   apiKey?: string;
+  /** Service account token for authenticating backend proxy requests to Grafana API */
+  serviceAccountToken?: string;
 }
