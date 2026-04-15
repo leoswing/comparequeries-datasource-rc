@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -18,9 +19,10 @@ var _ backend.CheckHealthHandler = (*Datasource)(nil)
 var _ instancemgmt.Instance = (*Datasource)(nil)
 
 type Datasource struct {
-	settings DatasourceSettings
-	token    string
-	logger   log.Logger
+	settings   DatasourceSettings
+	token      string
+	logger     log.Logger
+	httpClient *http.Client
 }
 
 func NewDatasource(_ context.Context, dis backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
@@ -37,9 +39,10 @@ func NewDatasource(_ context.Context, dis backend.DataSourceInstanceSettings) (i
 	}
 
 	return &Datasource{
-		settings: settings,
-		token:    token,
-		logger:   log.DefaultLogger,
+		settings:   settings,
+		token:      token,
+		logger:     log.DefaultLogger,
+		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
 
@@ -52,7 +55,7 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 	response := backend.NewQueryDataResponse()
 
 	grafanaURL := d.resolveGrafanaURL(req.PluginContext)
-	client := NewGrafanaClient(grafanaURL, d.token)
+	client := NewGrafanaClient(grafanaURL, d.token, d.httpClient)
 
 	for _, q := range req.Queries {
 		res := d.handleQuery(ctx, client, q)
@@ -144,7 +147,6 @@ func (d *Datasource) executeShiftedQuery(
 	frames, err := client.QueryDatasource(
 		ctx,
 		qm.DatasourceUid,
-		qm.DatasourceType,
 		qm.TargetQueryJSON,
 		queryFrom,
 		queryTo,
@@ -273,7 +275,7 @@ func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRe
 		}, nil
 	}
 
-	client := NewGrafanaClient(grafanaURL, d.token)
+	client := NewGrafanaClient(grafanaURL, d.token, d.httpClient)
 	_, err := client.httpClient.Get(grafanaURL + "/api/health")
 	if err != nil {
 		return &backend.CheckHealthResult{

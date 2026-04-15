@@ -22,9 +22,11 @@ type GrafanaClient struct {
 	logger     log.Logger
 }
 
-func NewGrafanaClient(baseURL, token string) *GrafanaClient {
+// NewGrafanaClient creates a GrafanaClient using the provided shared http.Client.
+// Sharing the http.Client across requests reuses the underlying connection pool.
+func NewGrafanaClient(baseURL, token string, httpClient *http.Client) *GrafanaClient {
 	return &GrafanaClient{
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: httpClient,
 		baseURL:    baseURL,
 		token:      token,
 		logger:     log.DefaultLogger,
@@ -33,10 +35,10 @@ func NewGrafanaClient(baseURL, token string) *GrafanaClient {
 
 // QueryDatasource executes a query against a target datasource via Grafana's /api/ds/query.
 // It returns the parsed data frames from the response.
+// dsType is optional: Grafana resolves the plugin type from dsUID automatically.
 func (c *GrafanaClient) QueryDatasource(
 	ctx context.Context,
 	dsUID string,
-	dsType string,
 	targetQueryJSON json.RawMessage,
 	from, to time.Time,
 	intervalMs int64,
@@ -52,11 +54,7 @@ func (c *GrafanaClient) QueryDatasource(
 	}
 
 	query["refId"] = refID
-	ds := map[string]string{"uid": dsUID}
-	if dsType != "" {
-		ds["type"] = dsType
-	}
-	query["datasource"] = ds
+	query["datasource"] = map[string]string{"uid": dsUID}
 	if intervalMs > 0 {
 		query["intervalMs"] = intervalMs
 	}
@@ -130,7 +128,7 @@ func (c *GrafanaClient) parseFramesFromResponse(body []byte, refID string) ([]*d
 		frame := &data.Frame{}
 		if err := json.Unmarshal(raw, frame); err != nil {
 			c.logger.Warn("Failed to unmarshal frame, trying fallback", "index", i, "error", err)
-			parsedFrame, fallbackErr := parseFrameManual(raw)
+			parsedFrame, fallbackErr := parseFrameManual(raw, c.logger)
 			if fallbackErr != nil {
 				return nil, fmt.Errorf("unmarshal frame %d: %w (fallback: %v)", i, err, fallbackErr)
 			}
@@ -143,7 +141,7 @@ func (c *GrafanaClient) parseFramesFromResponse(body []byte, refID string) ([]*d
 }
 
 // parseFrameManual is a fallback parser for frames that the SDK can't unmarshal directly.
-func parseFrameManual(raw json.RawMessage) (*data.Frame, error) {
+func parseFrameManual(raw json.RawMessage, logger log.Logger) (*data.Frame, error) {
 	var wrapper struct {
 		Schema struct {
 			Name   string `json:"name"`
@@ -185,53 +183,50 @@ func parseFrameManual(raw json.RawMessage) (*data.Frame, error) {
 			frame.Fields = append(frame.Fields, field)
 
 		case "number":
-			var values []*float64
-			if err := json.Unmarshal(wrapper.Data.Values[i], &values); err != nil {
-				// Try non-nullable
-				var plainValues []float64
-				if err2 := json.Unmarshal(wrapper.Data.Values[i], &plainValues); err2 != nil {
-					return nil, fmt.Errorf("parse number values: %w", err2)
-				}
-				ptrs := make([]*float64, len(plainValues))
-				for j := range plainValues {
-					ptrs[j] = &plainValues[j]
-				}
-				values = ptrs
+			values, err := parseNullableSlice[float64](wrapper.Data.Values[i])
+			if err != nil {
+				return nil, fmt.Errorf("parse number values: %w", err)
 			}
 			field := data.NewField(fieldDef.Name, fieldDef.Labels, values)
 			applyFieldConfig(field, fieldDef.Config)
 			frame.Fields = append(frame.Fields, field)
 
 		case "string":
-			var values []*string
-			if err := json.Unmarshal(wrapper.Data.Values[i], &values); err != nil {
-				var plainValues []string
-				if err2 := json.Unmarshal(wrapper.Data.Values[i], &plainValues); err2 != nil {
-					return nil, fmt.Errorf("parse string values: %w", err2)
-				}
-				ptrs := make([]*string, len(plainValues))
-				for j := range plainValues {
-					ptrs[j] = &plainValues[j]
-				}
-				values = ptrs
+			values, err := parseNullableSlice[string](wrapper.Data.Values[i])
+			if err != nil {
+				return nil, fmt.Errorf("parse string values: %w", err)
 			}
 			field := data.NewField(fieldDef.Name, fieldDef.Labels, values)
 			applyFieldConfig(field, fieldDef.Config)
 			frame.Fields = append(frame.Fields, field)
 
 		default:
-			var values []float64
-			_ = json.Unmarshal(wrapper.Data.Values[i], &values)
-			ptrs := make([]*float64, len(values))
-			for j := range values {
-				ptrs[j] = &values[j]
-			}
-			field := data.NewField(fieldDef.Name, fieldDef.Labels, ptrs)
-			frame.Fields = append(frame.Fields, field)
+			logger.Warn("Unknown frame field type, skipping field",
+				"fieldName", fieldDef.Name, "fieldType", fieldDef.Type)
 		}
 	}
 
 	return frame, nil
+}
+
+// parseNullableSlice deserialises a JSON array into a []*T slice.
+// It first tries nullable form ([]*T); if that fails it falls back to plain []T
+// and converts to pointers, matching Grafana's data frame wire format.
+func parseNullableSlice[T any](raw json.RawMessage) ([]*T, error) {
+	var nullable []*T
+	if err := json.Unmarshal(raw, &nullable); err == nil {
+		return nullable, nil
+	}
+	var plain []T
+	if err := json.Unmarshal(raw, &plain); err != nil {
+		return nil, err
+	}
+	result := make([]*T, len(plain))
+	for i := range plain {
+		v := plain[i]
+		result[i] = &v
+	}
+	return result, nil
 }
 
 func applyFieldConfig(field *data.Field, configRaw json.RawMessage) {
