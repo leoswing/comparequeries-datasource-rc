@@ -301,7 +301,7 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
           >
             <Input
               width={30}
-              placeholder="e.g. prometheus-uid"
+              placeholder="e.g. elasticsearch-uid"
               value={target.datasourceUid || ''}
               onChange={onDatasourceUidChange}
               onBlur={handleBlur}
@@ -311,11 +311,11 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
           <InlineField
             label="Datasource Type"
             labelWidth={22}
-            tooltip="The type identifier of the target datasource (e.g. prometheus, loki, influxdb)"
+            tooltip="The type identifier of the target datasource (e.g. elasticsearch, prometheus, loki, influxdb, mysql)"
           >
             <Input
               width={30}
-              placeholder="e.g. prometheus"
+              placeholder="e.g. elasticsearch"
               value={target.datasourceType || ''}
               onChange={onDatasourceTypeChange}
               onBlur={handleBlur}
@@ -325,12 +325,12 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
           <InlineField
             label="Target Query JSON"
             labelWidth={22}
-            tooltip='Full query payload as JSON for the target datasource, e.g. {"expr": "up", "legendFormat": "{{instance}}"}'
+            tooltip='Full query payload as JSON for the target datasource. Elasticsearch e.g. {"query":"level:error","timeField":"@timestamp","metrics":[{"type":"count","id":"1"}],"bucketAggs":[{"type":"date_histogram","field":"@timestamp","id":"2","settings":{"interval":"auto"}}]}. Prometheus e.g. {"expr":"up","legendFormat":"{{instance}}"}'
           >
             <TextArea
               cols={60}
               rows={4}
-              placeholder='{"expr": "rate(http_requests_total[5m])", "legendFormat": "{{instance}}"}'
+              placeholder='{"query": "*", "timeField": "@timestamp", "metrics": [{"type": "count", "id": "1"}], "bucketAggs": [{"type": "date_histogram", "field": "@timestamp", "id": "2", "settings": {"interval": "auto"}}]}'
               value={
                 target.targetQueryJSON
                   ? (typeof target.targetQueryJSON === 'string'

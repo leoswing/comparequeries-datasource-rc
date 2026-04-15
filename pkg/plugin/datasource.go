@@ -172,8 +172,8 @@ func (d *Datasource) executeShiftedQuery(
 	return frames, nil
 }
 
-// applyAlias renames numeric field names/display names to include the time shift alias.
-// Mirrors the frontend logic in datasource.ts _compareQuery.
+// applyAlias renames numeric field names/display names to include the time shift alias,
+// and injects a "timeshift" label so Grafana Alerting can distinguish series during union.
 func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter string) {
 	for _, field := range frame.Fields {
 		if field.Type() == data.FieldTypeTime || field.Type() == data.FieldTypeNullableTime {
@@ -190,6 +190,13 @@ func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter s
 				field.Config.DisplayNameFromDS = generalAlias(field.Config.DisplayNameFromDS, alias, aliasType, delimiter)
 			}
 		}
+
+		// Inject timeshift label so Grafana Alerting union can distinguish series from
+		// different time shifts. Without this all frames have empty labels {} and get dropped.
+		if field.Labels == nil {
+			field.Labels = data.Labels{}
+		}
+		field.Labels["timeshift"] = alias
 	}
 }
 
