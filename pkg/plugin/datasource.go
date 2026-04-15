@@ -93,10 +93,9 @@ func (d *Datasource) handleQuery(ctx context.Context, client *GrafanaClient, q b
 	var allFrames data.Frames
 
 	for _, ts := range qm.TimeShifts {
-		if ts.Value == "" {
-			continue
-		}
-
+		// Empty value means "no time shift" — query the current time window as-is.
+		// Skipping would leave allFrames nil and cause the alerting expr engine to
+		// report responseType=error even when the plugin returns status=ok.
 		frames, err := d.executeShiftedQuery(ctx, client, q, qm, ts)
 		if err != nil {
 			d.logger.Error("Failed to execute shifted query",
@@ -106,6 +105,11 @@ func (d *Datasource) handleQuery(ctx context.Context, client *GrafanaClient, q b
 		}
 
 		allFrames = append(allFrames, frames...)
+	}
+
+	if len(allFrames) == 0 {
+		return backend.ErrDataResponse(backend.StatusBadRequest,
+			"no data returned from target datasource — check Target Datasource UID and Target Query JSON")
 	}
 
 	return backend.DataResponse{Frames: allFrames}
@@ -118,9 +122,14 @@ func (d *Datasource) executeShiftedQuery(
 	qm QueryModel,
 	ts TimeShift,
 ) ([]*data.Frame, error) {
-	shiftedFrom, shiftedTo, err := ShiftTimeRange(q.TimeRange.From, q.TimeRange.To, ts.Value)
-	if err != nil {
-		return nil, fmt.Errorf("parse time shift %q: %w", ts.Value, err)
+	var queryFrom, queryTo = q.TimeRange.From, q.TimeRange.To
+
+	if ts.Value != "" {
+		shiftedFrom, shiftedTo, err := ShiftTimeRange(q.TimeRange.From, q.TimeRange.To, ts.Value)
+		if err != nil {
+			return nil, fmt.Errorf("parse time shift %q: %w", ts.Value, err)
+		}
+		queryFrom, queryTo = shiftedFrom, shiftedTo
 	}
 
 	d.logger.Debug("Executing shifted query",
@@ -128,8 +137,8 @@ func (d *Datasource) executeShiftedQuery(
 		"shift", ts.Value,
 		"originalFrom", q.TimeRange.From,
 		"originalTo", q.TimeRange.To,
-		"shiftedFrom", shiftedFrom,
-		"shiftedTo", shiftedTo,
+		"queryFrom", queryFrom,
+		"queryTo", queryTo,
 	)
 
 	frames, err := client.QueryDatasource(
@@ -137,8 +146,8 @@ func (d *Datasource) executeShiftedQuery(
 		qm.DatasourceUid,
 		qm.DatasourceType,
 		qm.TargetQueryJSON,
-		shiftedFrom,
-		shiftedTo,
+		queryFrom,
+		queryTo,
 		q.Interval.Milliseconds(),
 		q.MaxDataPoints,
 	)
@@ -162,7 +171,7 @@ func (d *Datasource) executeShiftedQuery(
 	for _, frame := range frames {
 		d.applyAlias(frame, alias, aliasType, delimiter)
 
-		if qm.Process {
+		if qm.Process && ts.Value != "" {
 			if err := d.shiftTimestampsBack(frame, ts.Value); err != nil {
 				d.logger.Warn("Failed to shift timestamps back", "error", err)
 			}

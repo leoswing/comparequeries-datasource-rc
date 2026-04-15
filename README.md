@@ -83,8 +83,7 @@ Expand this section to configure the target datasource for backend/alerting quer
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| **Target Datasource UID** | UID of the datasource to query. Find it in the datasource settings URL or via `GET /api/datasources`. | `elasticsearch-uid` |
-| **Datasource Type** | Type identifier of the target datasource. | `elasticsearch`, `prometheus`, `loki`, `influxdb` |
+| **Target Datasource UID** | UID of the datasource to query. Find it in the datasource settings URL or via `GET /api/datasources`. Grafana resolves the datasource type automatically from the UID — no separate type field is needed. | `elasticsearch-uid` |
 | **Target Query JSON** | The query payload sent to the target datasource, in JSON format. Do **not** include `refId`, `datasource`, `intervalMs`, or `maxDataPoints` — these are injected automatically. | See examples below |
 
 ## Target Query JSON Examples

@@ -171,11 +171,6 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
     onChange({ ...query, ...target });
   };
 
-  const onDatasourceTypeChange = (event: ChangeEvent<HTMLInputElement>) => {
-    target.datasourceType = event.target.value;
-    onChange({ ...query, ...target });
-  };
-
   const onTargetQueryJSONChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     try {
       target.targetQueryJSON = JSON.parse(event.target.value);
@@ -297,27 +292,13 @@ export function QueryEditor({ query, onChange, onRunQuery }: Props) {
           <InlineField
             label="Target Datasource UID"
             labelWidth={22}
-            tooltip="The UID of the datasource to query (find it in datasource settings URL or via API)"
+            tooltip="The UID of the datasource to query. Find it in the datasource settings URL or via GET /api/datasources. The datasource type is resolved automatically by Grafana from the UID."
           >
             <Input
               width={30}
               placeholder="e.g. elasticsearch-uid"
               value={target.datasourceUid || ''}
               onChange={onDatasourceUidChange}
-              onBlur={handleBlur}
-            />
-          </InlineField>
-
-          <InlineField
-            label="Datasource Type"
-            labelWidth={22}
-            tooltip="The type identifier of the target datasource (e.g. elasticsearch, prometheus, loki, influxdb, mysql)"
-          >
-            <Input
-              width={30}
-              placeholder="e.g. elasticsearch"
-              value={target.datasourceType || ''}
-              onChange={onDatasourceTypeChange}
               onBlur={handleBlur}
             />
           </InlineField>

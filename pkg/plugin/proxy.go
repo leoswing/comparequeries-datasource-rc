@@ -52,10 +52,11 @@ func (c *GrafanaClient) QueryDatasource(
 	}
 
 	query["refId"] = refID
-	query["datasource"] = map[string]string{
-		"uid":  dsUID,
-		"type": dsType,
+	ds := map[string]string{"uid": dsUID}
+	if dsType != "" {
+		ds["type"] = dsType
 	}
+	query["datasource"] = ds
 	if intervalMs > 0 {
 		query["intervalMs"] = intervalMs
 	}
