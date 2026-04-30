@@ -12,6 +12,9 @@
     "lint:fix": "npm run lint -- --fix",
     "e2e": "playwright test",
     "server": "docker-compose up --build",
+    "server:matrix:up": "bash scripts/grafana-matrix.sh up",
+    "server:matrix:status": "bash scripts/grafana-matrix.sh status",
+    "server:matrix:down": "bash scripts/grafana-matrix.sh down",
     "sign": "npx --yes @grafana/sign-plugin@latest"
   },
   "author": "Mit",

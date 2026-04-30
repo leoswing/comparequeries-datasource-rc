@@ -41,3 +41,4 @@ ci/
 
 # Go backend build artifacts
 dist/gpx_*
+

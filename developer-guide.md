@@ -74,6 +74,34 @@ For alternative ways of cloning the Grafana repository, refer to [GitHub's docum
    npm run server
    ```
 
+### Multi-version verification (parallel) + persistent data
+
+Use the matrix helper to validate the same plugin build against multiple Grafana versions in parallel.
+Each version gets its own project name, port, and persistent Docker named volume for Grafana state.
+
+```bash
+# Default versions: 11.6.5,12.0.0 on ports 3100+
+npm run server:matrix:up
+
+# Show status per version
+npm run server:matrix:status
+
+# Stop all versions (keeps data in .data/)
+npm run server:matrix:down
+```
+
+Optional environment variables:
+
+- `GRAFANA_MATRIX_VERSIONS` (comma-separated), e.g. `11.6.5,12.0.0,13.1.0`
+- `GRAFANA_MATRIX_BASE_PORT` (default `3100`)
+- `GRAFANA_MATRIX_PROJECT_PREFIX` (default `comparequeries-grafana`)
+
+Example:
+
+```bash
+GRAFANA_MATRIX_VERSIONS=11.6.5,12.0.0 GRAFANA_MATRIX_BASE_PORT=3200 npm run server:matrix:up
+```
+
 6. Run the E2E tests (using Cypress)
 
    ```bash

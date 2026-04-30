@@ -187,8 +187,18 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     const shifts: any[] = Array.isArray(target.timeShifts) && target.timeShifts.length > 0
       ? target.timeShifts
       : [{ id: 0 }];
+    const hasValidShift = shifts.some((ts: any) => {
+      const resolved = this.templateSrv.replace(ts?.value ?? '', options.scopedVars).trim();
+      return !!resolved && TIMESHIFT_FORMAT_REG.test(resolved);
+    });
+    const effectiveShifts = hasValidShift
+      ? shifts.filter((ts: any) => {
+          const resolved = this.templateSrv.replace(ts?.value ?? '', options.scopedVars).trim();
+          return TIMESHIFT_FORMAT_REG.test(resolved);
+        })
+      : shifts;
 
-    const shiftPromises = shifts.map((ts: any, idx: number) =>
+    const shiftPromises = effectiveShifts.map((ts: any, idx: number) =>
       this._runOneShift(ds, options, target, baseQuery, ts, idx)
     );
 
@@ -527,7 +537,7 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     };
   }
 
-  addTimeShift(time: any, timeShift: number) {
+  addTimeShift(time: any, timeShift: string) {
     let timeShiftObj = this.parseTimeShift(timeShift);
 
     if (!timeShiftObj) {
