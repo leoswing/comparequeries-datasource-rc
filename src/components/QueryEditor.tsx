@@ -110,12 +110,13 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
       borderTop: `1px solid ${theme.colors.border.weak}`,
     }),
     sectionTitle: css({
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: 500,
-      color: theme.colors.text.secondary,
+      color: theme.colors.text.primary,
       marginBottom: 8,
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
     }),
     sectionHint: css({
       fontSize: 12,
@@ -142,6 +143,16 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
       gap: 8,
       marginTop: 8,
       flexWrap: 'wrap',
+    }),
+    statusTag: css({
+      fontSize: 11,
+      lineHeight: 1,
+      padding: '4px 6px',
+      borderRadius: 4,
+      border: `1px solid ${theme.colors.border.weak}`,
+      color: theme.colors.text.secondary,
+      background: theme.colors.background.secondary,
+      whiteSpace: 'nowrap',
     }),
   });
 
@@ -497,13 +508,11 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
 
   const renderTargetDatasourceSection = () => (
     <div className={styles.section}>
-      <div className={styles.sectionTitle}>Target Datasource & Query</div>
-      <div className={styles.sectionHint}>
-        Pick the real datasource to query — the plugin embeds its native query editor below
-        (PromQL autocomplete, ES bucket aggs, LogQL, SQL, etc.) and runs that payload once per
-        time-shift row above. An empty <em>Amount</em> means &quot;no shift&quot; (base series).
-        This flow works on any panel datasource (no need for <code>-- Mixed --</code>) and is
-        required for Grafana Alerting.
+      <div className={styles.sectionTitle}>
+        {selectedDatasource ? 'Configure query' : 'Select datasource'}
+        <span className={styles.statusTag}>
+          {selectedDatasource ? selectedDatasource.label : 'Required'}
+        </span>
       </div>
 
       <InlineField
@@ -622,20 +631,8 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
     </div>
   );
 
-  const renderEmptyHint = () => (
-    <Alert title="Pick a Target Datasource to get started" severity="info">
-      <p style={{ marginBottom: 0 }}>
-        Add at least one Time-shift row above (an empty <em>Amount</em> means &quot;no shift&quot;,
-        i.e. the base series), then choose the real datasource you want to compare across time
-        below — its native query editor will be embedded right here.
-      </p>
-    </Alert>
-  );
-
   return (
     <div>
-      {mode === 'empty' && renderEmptyHint()}
-
       {renderTimeShiftRows()}
 
       {mode !== 'legacy' && renderTargetDatasourceSection()}
