@@ -20,9 +20,12 @@ Key features:
 ![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
 
-# Breaking changes
+# Compatibility notes (2.1.0)
 
-- Plugin with id `leoswing-comparequeries-datasource`, and with signature verification.
+- Plugin id is `leoswing-comparequeries-datasource` and uses signature verification.
+- Grafana 13+ with **legacy refId mode**: this mode works only when panel datasource is `-- Mixed --`.
+- Grafana 13+ non-Mixed panels should use **self-contained mode** (`datasourceUid` + `targetQueryJSON`).
+- Grafana Alerting support is a **new capability** in 2.1.0 (backend execution), not a breaking change.
 
 
 # Download
@@ -45,7 +48,19 @@ For detailed instructions on how to install the plugin on Grafana Cloud or local
 
 # Quick start
 
-The QueryEditor operates in **three modes** driven by the query data shape — you pick by simply choosing what to fill in.
+## Quick start (3 steps)
+
+For most users, this is all you need:
+
+1. Configure datasource authentication in **Connections -> Data sources** (default `No Authentication`).
+2. In panel QueryEditor, pick **Target Datasource** and build query in the embedded native editor.
+3. Add **Time-shift** rows (`1d`, `1w`, etc.), then save panel / alert rule.
+
+Need legacy `-- Mixed --` compatibility or upgrade details? See the sections below.
+
+## Query modes
+
+The QueryEditor operates in **three modes** driven by query shape.
 
 ## 1. Self-contained mode (recommended, Grafana 13+ ready)
 
@@ -107,17 +122,15 @@ Then keep one source query (for example refId `A`) and one CompareQueries row (f
 
 **Bottom line:** the upgrade itself is zero-action. Migration is only required if you want to drop `-- Mixed --` and unlock Grafana Alerting on a previously legacy-style query.
 
-## Why migrate
+## When migration is required
 
-| Capability | Legacy refId mode | Self-contained mode |
-|---|---|---|
-| Works on non-Mixed panel datasources (Grafana 13+) | ❌ | ✅ |
-| Native query editor UX (PromQL autocomplete, ES bucket aggs, …) | ❌ (the source query lives in a sibling refId, no inline editor for the compare row) | ✅ |
-| Grafana Alerting (backend mode) | ❌ | ✅ |
-| Single-query simplicity (no separate "host" refId required) | ❌ | ✅ |
-| Backward compatible with pre-Grafana 13 panels | ✅ | ✅ |
+Migrate from legacy Mixed/refId mode to self-contained mode when you need any of these:
 
-If any of the rows above matter for a given dashboard, migrate it. Otherwise, leaving the dashboard on legacy mode is perfectly fine — the plugin keeps both flows alive indefinitely.
+- Non-Mixed panel datasources on Grafana 13+
+- Grafana Alerting with CompareQueries
+- Native inline query editor UX for target datasource
+
+If none apply, legacy dashboards can remain as-is.
 
 ## In-editor migration (recommended, per-query)
 
@@ -127,7 +140,7 @@ The QueryEditor auto-detects legacy queries and shows a yellow Alert with a one-
 2. Click **`Migrate to Target Datasource →`**.
 3. In the inline picker, choose the **same** datasource that the referenced refId (e.g. `A`) was pointing at — typically Prometheus / Elasticsearch / Loki / etc.
 4. Click **Migrate**. The QueryEditor flips to self-contained mode and embeds that datasource's native QueryEditor.
-5. Re-build the actual query in the embedded editor (copy/paste from the original refId `A` row in the same panel — see [Manual cloning helper](#manual-cloning-helper) below).
+5. Re-build the actual query in the embedded editor (copy/paste from the original refId `A` row in the same panel; for raw JSON cloning workflow, see `developer-guide.md`).
 6. Optionally delete the now-orphan refId `A` query if no other compare row references it.
 7. Optionally switch the panel datasource away from `-- Mixed --` to **CompareQueries** itself (or any other datasource) — non-Mixed panels are now supported.
 8. **Save** the dashboard.
@@ -142,67 +155,7 @@ The QueryEditor auto-detects legacy queries and shows a yellow Alert with a one-
 | Old `Reference Query refId` field (`target.query`) | 🧹 cleared |
 | `targetQueryJSON` (actual query payload) | ⚠️ reset to `{}` — you re-build it in the embedded editor |
 
-Why the payload isn't auto-cloned: the Grafana QueryEditor API exposes only the **current** target's data, never sibling targets in the same panel. Across Grafana 11/12/13+ versions there is no stable, public hook to introspect them, so cloning silently in the UI would be brittle. The trade-off is asking you to paste the query once.
-
-### Manual cloning helper
-
-For each panel you are migrating, this trick gets you the original payload to paste:
-
-1. Before clicking **Migrate**, open browser DevTools → **Network** tab.
-2. Refresh the dashboard panel once. Filter for `/api/ds/query`.
-3. In the request payload of the CompareQueries-bearing call, find `queries[]` and locate the entry whose `refId` matches the legacy `Reference Query refId` value (e.g. `A`). Copy its body.
-4. Strip these reserved fields before pasting: `refId`, `datasource`, `intervalMs`, `maxDataPoints`, `hide`, `key`.
-5. After clicking **Migrate**, switch the embedded editor to **`Edit as raw JSON →`** and paste the cleaned object. Switch back to the native editor — Grafana renders the equivalent UI from your JSON.
-
-## Bulk migration via the dashboard JSON API
-
-For large estates, you can rewrite dashboards programmatically. Each CompareQueries target shape:
-
-```jsonc
-// Legacy (2.0.x) — relies on a sibling refId in a Mixed panel
-{
-  "refId": "B",
-  "datasource": { "type": "leoswing-comparequeries-datasource", "uid": "<cq-uid>" },
-  "query": "A",
-  "timeShifts": [{ "id": 0, "value": "1d", "alias": "yesterday", "aliasType": "suffix", "delimiter": "_" }],
-  "process": true
-}
-
-// Self-contained (2.1.0+) — works on any panel datasource and on Alerting
-{
-  "refId": "B",
-  "datasource": { "type": "leoswing-comparequeries-datasource", "uid": "<cq-uid>" },
-  "datasourceUid": "<target-ds-uid>",
-  "targetQueryJSON": {
-    "expr": "rate(http_requests_total[5m])",
-    "legendFormat": "{{instance}}"
-  },
-  "timeShifts": [{ "id": 0, "value": "1d", "alias": "yesterday", "aliasType": "suffix", "delimiter": "_" }],
-  "process": true
-}
-```
-
-### Migration script outline
-
-```bash
-# 1. Pull the dashboard
-curl -s -u admin:<pwd> http://localhost:3000/api/dashboards/uid/<dashboard-uid> > dash.json
-
-# 2. For each CompareQueries target with `query: "A"`:
-#    a) find sibling target with refId === "A" in the same panel
-#    b) copy its datasource.uid into the CompareQueries target as `datasourceUid`
-#    c) copy the rest of the sibling target (minus refId/datasource/intervalMs/maxDataPoints/hide/key)
-#       into `targetQueryJSON`
-#    d) delete the legacy `query` field
-#    e) optionally delete the now-orphan sibling target
-
-# 3. Push back
-curl -s -u admin:<pwd> -X POST -H 'Content-Type: application/json' \
-     -d '{"dashboard": <patched>, "overwrite": true}' \
-     http://localhost:3000/api/dashboards/db
-```
-
-The plugin's runtime detects the new shape via `datasourceUid` + non-empty `targetQueryJSON` and routes to `_runSelfContained` automatically — no further dashboard reload required.
+For advanced migration operations (manual JSON cloning from network payloads, and bulk migration via Dashboard JSON API), see **Developer guide → Advanced migration (2.0.x to 2.1.0)**.
 
 ## Rollback
 
@@ -247,84 +200,24 @@ For alerting, use **self-contained mode** (see [Quick start](#quick-start) above
 | **Embedded native editor** | Build the query the way you would on the source datasource. The plugin strips Grafana-injected fields (`refId`, `datasource`, `key`, `hide`) from the payload before saving — they are re-injected on dispatch. |
 | **Edit as raw JSON** | Fallback when the target datasource doesn't ship a `QueryEditor` component, or when you want to paste a hand-crafted payload. |
 
-## Target Query JSON Examples
+## Alert rule expression setup
 
-### Elasticsearch
+After query `A` is configured:
 
-Count of documents over time:
+1. Add **Reduce** (recommended reducer: `Last` or `Mean`)
+2. Add **Threshold** (for example `IS ABOVE 100`)
 
-```json
-{
-  "query": "*",
-  "timeField": "@timestamp",
-  "metrics": [{ "type": "count", "id": "1" }],
-  "bucketAggs": [{
-    "type": "date_histogram",
-    "field": "@timestamp",
-    "id": "2",
-    "settings": { "interval": "auto", "min_doc_count": "0" }
-  }]
-}
-```
+Each shifted series carries a `timeshift` label (for example `timeshift="1d"`), so Grafana evaluates each shifted branch correctly.
 
-Count with filter (e.g. error logs):
-
-```json
-{
-  "query": "level:error AND service:my-service",
-  "timeField": "@timestamp",
-  "metrics": [{ "type": "count", "id": "1" }],
-  "bucketAggs": [{
-    "type": "date_histogram",
-    "field": "@timestamp",
-    "id": "2",
-    "settings": { "interval": "auto" }
-  }]
-}
-```
-
-Average of a numeric field:
-
-```json
-{
-  "query": "service:api",
-  "timeField": "@timestamp",
-  "metrics": [{ "type": "avg", "id": "1", "field": "response_time" }],
-  "bucketAggs": [{
-    "type": "date_histogram",
-    "field": "@timestamp",
-    "id": "2",
-    "settings": { "interval": "auto" }
-  }]
-}
-```
-
-### Prometheus
-
-```json
-{
-  "expr": "rate(http_requests_total[5m])",
-  "legendFormat": "{{instance}}"
-}
-```
-
-> **Tip**: The easiest way to get the correct JSON for your datasource is to configure the query in a normal dashboard panel, then open the browser DevTools → Network, filter for `/api/ds/query`, run the query, and copy the `queries[0]` object from the request payload. Remove `refId`, `datasource`, `intervalMs`, `maxDataPoints`, and `hide` before pasting.
-
-## Alert Expression Setup
-
-After configuring the query, set up expressions in the alert rule as follows:
-
-1. **Reduce** — collapse each time-shifted series to a single value (recommended: `Last` or `Mean`)
-2. **Threshold** — apply a condition on the reduced value (e.g. `IS ABOVE 100`)
-
-Each time-shifted series is identified by a unique `timeshift` label (e.g. `timeshift="-1w"`), so Grafana can correctly union and evaluate multiple shifts in a single alert rule.
+For raw JSON examples and advanced alert migration troubleshooting, see `developer-guide.md`.
 
 ## Finding the Datasource UID
 
 Run the following command to list all datasources and their UIDs:
 
 ```bash
-curl http://admin:<password>@localhost:3000/api/datasources | python3 -m json.tool | grep -E '"name"|"type"|"uid"'
+GRAFANA_BASE_URL=<grafana-base-url> # local default: http://localhost:3000
+curl -s -u admin:<password> "$GRAFANA_BASE_URL/api/datasources" | python3 -m json.tool | grep -E '"name"|"type"|"uid"'
 ```
 
 

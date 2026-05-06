@@ -10,6 +10,7 @@ Key features:
 - Compatible with Grafana 11/12/13+
 - Resolves issues with undefined data points
 - Introduces support for timeShift aliases
+- Supports Grafana Alerting (backend execution in self-contained mode)
 
 ![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
@@ -47,3 +48,17 @@ In legacy Mixed mode:
 - Keep panel datasource as `-- Mixed --` for this compatibility path
 
 ![Screenshot-plugin-usage-mixed](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/plugin-usage-mixed.png)
+
+# Grafana Alerting (2.1.0+)
+
+Alerting uses backend execution and requires **self-contained mode** (`datasourceUid` + `targetQueryJSON`).
+
+- Default datasource auth mode is `No Authentication`.
+- If backend/alerting requests fail authentication, switch to `Basic authentication`.
+- In `Basic authentication`, configure `Service Account` token and (optionally) `Grafana URL`.
+
+Reference alert rule setup (query + condition):
+
+![Screenshot-alert-config](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/alert-config.png)
+
+For advanced alert migration and troubleshooting details, see `../developer-guide.md`.
