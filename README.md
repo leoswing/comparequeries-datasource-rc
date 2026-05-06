@@ -75,6 +75,25 @@ These dashboards keep working as-is after upgrade. The QueryEditor auto-detects 
 
 A brand-new query shows a guided hint pointing at the Target Datasource picker.
 
+## Datasource settings (Grafana 13+)
+
+Configure the CompareQueries datasource in **Connections -> Data sources**.
+
+- `Authentication (Optional)` defaults to `No Authentication`.
+- Switch to `Basic authentication` only when backend/alerting requests fail authentication.
+- When `Basic authentication` is selected, configure:
+  - `Service Account` token
+  - optional `Grafana URL` (only if auto-detection is incorrect)
+
+![Datasource settings](./img/datasource-settings.png)
+
+## Legacy Mixed mode on Grafana 13+ (compatibility)
+
+If you still use the old refId/Mixed workflow on Grafana 13+, set the panel datasource to `-- Mixed --`.
+Then keep one source query (for example refId `A`) and one CompareQueries row (for example refId `B`) with Time-shift.
+
+![Grafana 13 Mixed usage](./img/plugin-usage-mixed.png)
+
 
 # Migration Guide (2.0.x → 2.1.0)
 
@@ -196,10 +215,12 @@ This plugin supports Grafana Alerting in backend mode. When an alert rule is eva
 
 ## Prerequisites
 
-Before configuring alerts, make sure the following are set up in the datasource settings:
+Before configuring alerts, make sure datasource authentication is configured correctly for your environment:
 
-- **Grafana URL**: The URL of your Grafana instance (e.g. `http://localhost:3000`). Used by the backend to proxy queries via `/api/ds/query`.
-- **Service Account Token**: A Grafana service account token with at least `Viewer` permissions. Required to authenticate backend proxy requests.
+- Default: keep `Authentication` as **No Authentication**.
+- If backend/alerting evaluation fails due to authentication, switch to **Basic authentication** and configure:
+  - **Service Account Token**: A Grafana service account token with at least `Viewer` permissions.
+  - **Grafana URL**: Optional, usually auto-detected (set manually only when auto-detection is incorrect).
 
 To create a service account token: go to **Administration → Service Accounts → Add service account**, then generate a token and paste it into the datasource config.
 

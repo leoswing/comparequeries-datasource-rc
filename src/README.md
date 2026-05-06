@@ -7,7 +7,7 @@ This data source plugin enables data comparison capabilities by supporting queri
 
 Key features:
 
-- Compatible with Grafana 11
+- Compatible with Grafana 11/12/13+
 - Resolves issues with undefined data points
 - Introduces support for timeShift aliases
 
@@ -16,25 +16,34 @@ Key features:
 
 # Quick start
 
-Step 1. Add a data source with what you want, such as Elasticsearch.
+Step 1. Add the real target datasource you want to compare, such as Elasticsearch.
 
-Step 2. Create a data source with type CompareQueries. Grafana --> Connections --> Data sources --> Add new data source， then type 'compare' to use CompareQueries plugin.
+Step 2. Create a datasource of type CompareQueries.  
+Grafana -> Connections -> Data sources -> Add new data source -> search `compare`.
 
 
 ![Screenshot-create-db](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/create-db.png)
 
+Step 3. Configure CompareQueries datasource settings.
 
-Step 3. Create a Visualization and using this plugin as the mixed data source.
+- `Authentication (Optional)` defaults to `No Authentication`
+- Switch to `Basic authentication` only when backend/alerting requests fail authentication
+- Fill `Service Account` and optional `Grafana URL` only in that case
 
+![Screenshot-datasource-settings](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/datasource-settings.png)
 
-![Screenshot-mixed-db](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/conf-mixed-db.png)
+Step 4. Build panel query (Grafana 13+ recommended self-contained flow).
 
+- Use CompareQueries query row
+- Add time shift rows (`Amount` like `1d`, `1w`, etc.)
+- Pick `Target Datasource` in the CompareQueries editor and build query inline
 
-Step 4. Create a basic query using your database, such as Elasticsearch.
+Step 5. If you use the legacy Mixed flow on Grafana 13+, set panel datasource to `-- Mixed --` first.
 
-Step 5. Create a comparison query with this plugin, to create multi-line time series, the query requires at least 2 fields in the following order:
+In legacy Mixed mode:
 
-- field `Query`: `Query` field which refer to the basic query name
-- field `Amount`: `Amount` field with time range, time shift supports：s(second), m(minute), h(hour), d(day), w(week), M(month), y(year)
+- Query A: build normal source query (e.g. Elasticsearch)
+- Query B: use CompareQueries with time shift + target datasource query
+- Keep panel datasource as `-- Mixed --` for this compatibility path
 
-![Screenshot-usage-comparequeries](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/usage-comparequeries.png)
+![Screenshot-plugin-usage-mixed](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/plugin-usage-mixed.png)

@@ -54,6 +54,8 @@ export interface CompareQueriesOptions extends DataSourceJsonData {
   timeInterval?: string;
   /** Grafana instance URL for backend proxy queries (e.g. http://localhost:3000) */
   grafanaUrl?: string;
+  /** Authentication mode for backend proxy requests */
+  authMode?: 'none' | 'basic';
 }
 
 /**
