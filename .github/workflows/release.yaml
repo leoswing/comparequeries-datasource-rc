@@ -26,6 +26,10 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - name: Get npm cache directory
         id: npm-cache-dir
         run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
@@ -41,6 +45,12 @@ jobs:
         run: |
           npm install
           npm run build
+      - name: Install Mage
+        run: |
+          go install github.com/magefile/mage@latest
+          echo "$(go env GOPATH)/bin" >> ${GITHUB_PATH}
+      - name: Build Backend Binaries
+        run: mage BuildAll
       - name: Sign plugin
         run: npx --yes @grafana/sign-plugin@latest
         if: ${{ env.GRAFANA_ACCESS_POLICY_TOKEN != '' }}
