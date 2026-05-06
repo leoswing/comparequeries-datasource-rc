@@ -1,22 +1,22 @@
 services:
   grafana:
     user: root
-    container_name: 'leoswing-comparequeries-datasource'
+    container_name: ${GRAFANA_CONTAINER_NAME:-leoswing-comparequeries-datasource}
 
     build:
       context: ./.config
       args:
         grafana_image: ${GRAFANA_IMAGE:-grafana}
-        # grafana_version: ${GRAFANA_VERSION:-10.4.2}
-        grafana_version: ${GRAFANA_VERSION:-11.0.0}
-        # grafana_version: ${GRAFANA_VERSION:-8.4.0}
+        # grafana_version: ${GRAFANA_VERSION:-13.0}
+        grafana_version: ${GRAFANA_VERSION:-11.6.5}
         development: ${DEVELOPMENT:-false}
     ports:
-      - 3000:3000/tcp
+      - ${GRAFANA_PORT:-3000}:3000/tcp
     volumes:
       - ./dist:/var/lib/grafana/plugins/leoswing-comparequeries-datasource
       - ./provisioning:/etc/grafana/provisioning
       - .:/root/leoswing-comparequeries-datasource
+      - grafana-data:/var/lib/grafana
 
     environment:
       NODE_ENV: development
@@ -24,3 +24,8 @@ services:
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: leoswing-comparequeries-datasource
+      GF_PLUGIN_APP_URL: http://localhost:3000
+
+volumes:
+  grafana-data:
+    name: ${GRAFANA_DATA_VOLUME:-comparequeries-grafana-default-data}

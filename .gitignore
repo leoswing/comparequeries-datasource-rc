@@ -38,3 +38,7 @@ ci/
 .idea
 
 .eslintcache
+
+# Go backend build artifacts
+dist/gpx_*
+

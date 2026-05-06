@@ -1,3 +1,19 @@
+# 2.1.0 (2026-04-28)
+
+### Features and enhancements
+
+- **Grafana 13+ compatibility (non-breaking)** — the QueryEditor now operates in three modes driven by the query data shape:
+  - **Self-contained** (recommended) — pick a Target Datasource and the plugin embeds its **native** query editor (PromQL autocomplete, ES bucket aggs, LogQL, SQL, etc.). Works on any panel datasource, no `-- Mixed --` requirement, and is required for Grafana Alerting.
+  - **Legacy refId reference** (backward compatible) — pre-Grafana 13 / Mixed-panel dashboards keep working untouched. Old queries that only have a `query` (refId) field auto-fall into this mode.
+  - **Empty** — friendly onboarding hint for brand-new queries.
+- **One-click Migrate button** in legacy mode — swaps refId reference for a chosen Target Datasource while preserving timeShifts, alias settings and Process TimeShift.
+- **Backend `_runSelfContained` flow** — each target carries its own `datasourceUid` + `targetQueryJSON` and produces N frames per timeShift entry (empty Amount = base series). The legacy `_compareQuery` path is untouched.
+- **Embedded native editor fallback** — datasources without a contributed `QueryEditor` component still work via a raw JSON textarea.
+
+### Notes
+
+- `query` (refId reference) is marked `@deprecated` in the schema but **fully supported at runtime** for backward compatibility. Dashboards from 2.0.x require zero migration to upgrade.
+
 # 2.0.2 (2024-07-10)
 
 ## Bug fixes

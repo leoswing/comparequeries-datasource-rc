@@ -3,6 +3,10 @@
   "name": "CompareQueries",
   "id": "leoswing-comparequeries-datasource",
 
+  "backend": true,
+  "executable": "gpx_comparequeries_datasource",
+  "alerting": true,
+
   "metrics": true,
   "mixed": true,
   "annotations": false,
