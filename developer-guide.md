@@ -122,48 +122,71 @@ GRAFANA_MATRIX_VERSIONS=11.6.5,12.0.0 GRAFANA_MATRIX_BASE_PORT=3200 npm run serv
    npm run lint:fix
    ```
 
-## Advanced migration (2.0.x to 2.1.0)
+## Backend datasource plugin debugging
 
-Use this section only for bulk or scripted migrations. For most users, prefer the in-editor migrate flow documented in `README.md`.
+This plugin includes a Grafana backend datasource plugin for Alerting and backend query execution.
 
-### Manual cloning helper (per panel)
+Main backend entry points:
 
-When migrating a legacy Mixed/refId query to self-contained mode, you may need to copy the original target payload:
+- `pkg/plugin/datasource.go`: `QueryData` and `CheckHealth`
+- `pkg/plugin/proxy.go`: proxy requests to Grafana `/api/ds/query`
+- `pkg/plugin/types.go`: backend config and query models
 
-1. Before clicking **Migrate**, open browser DevTools -> **Network**.
-2. Refresh the panel and filter requests by `/api/ds/query`.
-3. In `queries[]`, find the entry whose `refId` matches the legacy reference (for example `A`), then copy its body.
-4. Remove Grafana-injected fields before pasting: `refId`, `datasource`, `intervalMs`, `maxDataPoints`, `hide`, `key`.
-5. In CompareQueries embedded editor, use **Edit as raw JSON** and paste the cleaned payload.
+### Start Grafana with backend logs
 
-### Bulk migration via Dashboard JSON API
-
-For large estates, you can rewrite dashboard JSON programmatically:
+Build the plugin and start Grafana:
 
 ```bash
-# Set your Grafana base URL first.
-# Local dev default: http://localhost:3000
-GRAFANA_BASE_URL=<grafana-base-url>
-
-# 1) Pull dashboard JSON
-curl -s -u admin:<pwd> "$GRAFANA_BASE_URL/api/dashboards/uid/<dashboard-uid>" > dash.json
-
-# 2) For each CompareQueries target with `query: "A"`:
-#    - find sibling target with refId == "A" in the same panel
-#    - copy sibling datasource.uid -> CompareQueries.datasourceUid
-#    - copy sibling query payload (minus refId/datasource/intervalMs/maxDataPoints/hide/key)
-#      -> CompareQueries.targetQueryJSON
-#    - remove legacy `query` field
-#    - optionally remove orphan sibling target
-
-# 3) Push patched dashboard
-curl -s -u admin:<pwd> -X POST -H 'Content-Type: application/json' \
-  -d '{"dashboard": <patched>, "overwrite": true}' \
-  "$GRAFANA_BASE_URL/api/dashboards/db"
+npm run build
+npm run server
 ```
 
-Runtime auto-detection note: when `datasourceUid` and non-empty `targetQueryJSON` are present, the plugin routes to self-contained execution automatically.
+The Docker config enables backend plugin debug logs:
 
+```bash
+GF_LOG_FILTERS=plugin.leoswing-comparequeries-datasource:debug
+GF_LOG_LEVEL=debug
+```
+
+### Check backend logs
+
+```bash
+docker logs -f <grafana-container-name>
+```
+
+Useful log messages:
+
+- `Plugin Request Started`
+- `Executing shifted query`
+- `Proxying query to Grafana`
+- `Plugin Request Completed`
+
+### Test backend query execution
+
+Backend execution is used by Grafana Alerting.
+
+1. Create a CompareQueries datasource.
+2. Keep `Authentication` as `No Authentication` for local development.
+3. Create an alert rule using CompareQueries.
+4. Pick `Target Datasource` inside CompareQueries.
+5. Add a `Time shift` row.
+6. Click **Preview alert rule condition**.
+
+Expected logs:
+
+- `endpoint=queryData`
+- `uname=grafana_scheduler` or alert-related backend execution
+- downstream target datasource query logs
+
+### Auth troubleshooting
+
+If backend query fails authentication:
+
+1. Switch datasource `Authentication` to `Basic authentication`.
+2. Add a Grafana Service Account token.
+3. Set Grafana URL only when auto-detection is incorrect.
+
+In local development, anonymous Admin may allow backend proxy calls without a token. Do not rely on that for production.
 
 ## Learn more
 
