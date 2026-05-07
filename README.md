@@ -17,15 +17,14 @@ Key features:
 - **Supports Grafana Alerting** via a backend plugin that proxies time-shifted queries to target datasources
 - **Backward compatible** — pre-Grafana 13 dashboards using the legacy Mixed + refId reference flow continue to work without migration
 
-![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/plugin-usage-mixed.png)
+![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
 
 # Compatibility notes (2.1.0)
 
 - Plugin id is `leoswing-comparequeries-datasource` and uses signature verification.
-- For dashboard panels, use Grafana `-- Mixed --` as the panel datasource, then add a CompareQueries query.
-- In the CompareQueries query, pick the **Target Datasource**, configure **Time shift**, and build the target query inline.
-- Legacy RefId usage is kept only for Grafana versions below 13 with existing CompareQueries RefId dashboards. For Grafana 13+, use `-- Mixed --` as the panel datasource and pick Target Datasource inside CompareQueries.
+- New dashboards should use the recommended dashboard flow described below.
+- Legacy RefId usage is kept only for Grafana versions below 13 with existing CompareQueries RefId dashboards.
 - Grafana Alerting is supported in 2.1.0 through backend execution.
 
 
@@ -79,6 +78,8 @@ An empty `Amount` means **no shift** (base series); `1d`, `1w`, etc. shift back 
 
 The plugin runs the embedded query once per Time-shift row, applies the alias rules, and merges everything into a single result.
 
+![Recommended dashboard usage](./img/plugin-usage-mixed.png)
+
 ## 2. Legacy RefId usage (Grafana < 13 existing dashboards only)
 
 Use this only if you are on Grafana versions below 13 and already have dashboards using the old CompareQueries RefId workflow.
@@ -95,18 +96,15 @@ The QueryEditor auto-detects legacy RefId queries and can show a **Migrate to Ta
 
 > **When should I migrate?** Migrate when you want the newer inline Target Datasource editor or Grafana Alerting.
 
-![Grafana 13 Mixed usage](./img/plugin-usage-mixed.png)
+The screenshot below shows the old RefId-based workflow used by existing Grafana 12 or earlier dashboards:
+
+![Legacy RefId usage on Grafana 12 or earlier](./img/usage-comparequeries.png)
 
 ## 3. Grafana Alerting usage
 
 Alerting runs through backend execution. Configure the CompareQueries query directly with **Target Datasource**, **Time shift**, and query inline. See [Grafana Alerting](#grafana-alerting).
 
-## 4. Not configured yet
-
-This is the initial state for a brand-new query.  
-It is not an error — it simply means no Target Datasource/query has been selected yet.
-
-## Datasource settings (Grafana 13+)
+## Datasource settings
 
 Configure the CompareQueries datasource in **Connections -> Data sources**.
 
@@ -122,8 +120,7 @@ Configure the CompareQueries datasource in **Connections -> Data sources**.
 
 Existing Grafana 11/12 dashboards keep working after upgrade.
 
-For Grafana 13+, legacy RefId dashboards should use the recommended flow:
-`-- Mixed --` panel + CompareQueries query + Target Datasource inside CompareQueries.
+For Grafana 13+, use the recommended dashboard flow instead of legacy RefId usage.
 
 To migrate in the editor:
 
