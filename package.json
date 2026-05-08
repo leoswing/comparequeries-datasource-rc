@@ -35,7 +35,7 @@
     "@types/node": "^20.8.7",
     "@types/react-router-dom": "^5.2.0",
     "@types/testing-library__jest-dom": "5.14.8",
-    "copy-webpack-plugin": "^11.0.0",
+    "copy-webpack-plugin": "^14.0.0",
     "css-loader": "^6.7.3",
     "eslint-plugin-deprecation": "^2.0.0",
     "eslint-webpack-plugin": "^4.0.1",
@@ -73,9 +73,6 @@
   "packageManager": "npm@8.19.3",
   "overrides": {
     "minimatch": "^9.0.8",
-    "serialize-javascript": "^7.0.5",
-    "picomatch": "^2.3.2",
-    "cross-spawn": "^7.0.6",
     "dompurify": "^3.4.2",
     "lodash": "^4.18.1",
     "immutable": "^5.1.5",
