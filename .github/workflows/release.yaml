@@ -1,84 +1,26 @@
-permissions: write-all
 name: Release
+
 on:
-  release:
-    types:
-      - created
-  # push:
-  #   branches:
-  #     - main
-  # pull_request:
-  #   types: [opened, reopened, synchronize]
-env:
-  NAME: leoswing-comparequeries-datasource
-  TAG: ${{ github.event.release.tag_name }}
-  GRAFANA_ACCESS_POLICY_TOKEN: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - name: Build, sign, and release plugin package
+        uses: grafana/plugin-actions/build-plugin@build-plugin/v1.2.0
         with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: Get npm cache directory
-        id: npm-cache-dir
-        run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
-
-      - uses: actions/cache@v3
-        id: npm-cache
-        with:
-          path: ${{ steps.npm-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - name: Build Project
-        run: |
-          npm install
-          npm run build
-      - name: Install Mage
-        run: |
-          go install github.com/magefile/mage@latest
-          echo "$(go env GOPATH)/bin" >> ${GITHUB_PATH}
-      - name: Build Backend Binaries
-        run: mage BuildAll
-      - name: Sign plugin
-        run: npx --yes @grafana/sign-plugin@latest
-        if: ${{ env.GRAFANA_ACCESS_POLICY_TOKEN != '' }}
-      - name: Build ZIP
-        run: |
-          cp -r ./dist ./${{ env.NAME }} && zip ${{ env.NAME }}-${{ env.TAG }}.zip ${{ env.NAME }} -r && rm -rf ${{ env.NAME }}
-          sha1sum ./${{ env.NAME }}-${{ env.TAG }}.zip >${{ env.NAME }}-${{ env.TAG }}.zip.sha1
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ env.NAME }}-${{ env.TAG }}.zip
-          asset_name: ${{ env.NAME }}-${{ env.TAG }}.zip
-          asset_content_type: application/zip
-      - name: Upload Release SHA
-        id: upload-release-sha
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ env.NAME }}-${{ env.TAG }}.zip.sha1
-          asset_name: ${{ env.NAME }}-${{ env.TAG }}.zip.sha1
-          asset_content_type: application/zip
-      - name: Update version package.json
-        uses: pocket-apps/action-update-version@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          policy_token: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
+          attestation: true
+          node-version: "20"
+          use_changelog_generator: true
+          token: ${{ secrets.CHANGELOG_PAT }}
