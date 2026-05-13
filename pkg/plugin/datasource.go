@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -38,11 +39,20 @@ func NewDatasource(_ context.Context, dis backend.DataSourceInstanceSettings) (i
 		settings.GrafanaURL = strings.TrimRight(dis.URL, "/")
 	}
 
+	httpClient, err := httpclient.NewProvider().New(httpclient.Options{
+		Timeouts: &httpclient.TimeoutOptions{
+			Timeout: 30 * time.Second,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create HTTP client: %w", err)
+	}
+
 	return &Datasource{
 		settings:   settings,
 		token:      token,
 		logger:     log.DefaultLogger,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: httpClient,
 	}, nil
 }
 
@@ -276,11 +286,31 @@ func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRe
 	}
 
 	client := NewGrafanaClient(grafanaURL, d.token, d.httpClient)
-	_, err := client.httpClient.Get(grafanaURL + "/api/health")
+	healthURL := grafanaURL + "/api/health"
+	healthReq, err := http.NewRequestWithContext(ctx, http.MethodGet, healthURL, nil)
+	if err != nil {
+		return &backend.CheckHealthResult{
+			Status:  backend.HealthStatusError,
+			Message: fmt.Sprintf("Cannot create Grafana health request for %s: %v", grafanaURL, err),
+		}, nil
+	}
+	if client.token != "" {
+		healthReq.Header.Set("Authorization", "Bearer "+client.token)
+	}
+
+	resp, err := client.httpClient.Do(healthReq)
 	if err != nil {
 		return &backend.CheckHealthResult{
 			Status:  backend.HealthStatusError,
 			Message: fmt.Sprintf("Cannot reach Grafana at %s: %v", grafanaURL, err),
+		}, nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return &backend.CheckHealthResult{
+			Status:  backend.HealthStatusError,
+			Message: fmt.Sprintf("Grafana health check at %s returned status %d.", grafanaURL, resp.StatusCode),
 		}, nil
 	}
 

@@ -15,18 +15,18 @@ const AUTH_MODE_OPTIONS: Array<SelectableValue<AuthMode>> = [
 
 const getStyles = (theme: GrafanaTheme2) => ({
   sectionDivider: css`
-    margin: 16px 0;
+    margin: ${theme.spacing(2, 0)};
     border: 0;
     border-top: 1px solid ${theme.colors.border.weak};
   `,
   sectionTitle: css`
-    margin: 0 0 6px 0;
+    margin: ${theme.spacing(0, 0, 0.75, 0)};
     font-size: ${theme.typography.h5.fontSize};
     font-weight: ${theme.typography.fontWeightMedium};
     color: ${theme.colors.text.primary};
   `,
   sectionSubtitle: css`
-    margin: 0 0 16px 0;
+    margin: ${theme.spacing(0, 0, 2, 0)};
     font-size: ${theme.typography.bodySmall.fontSize};
     color: ${theme.colors.text.secondary};
   `,
