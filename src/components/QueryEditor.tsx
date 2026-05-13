@@ -96,42 +96,42 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
 
   const getStyles = (theme: GrafanaTheme2) => ({
     root: css({ display: 'flex' }),
-    addButton: css({ padding: '0px 10px' }),
+    addButton: css({ padding: theme.spacing(0, 1.25) }),
     rawToggle: css({
-      marginTop: 4,
-      fontSize: 12,
+      marginTop: theme.spacing(0.5),
+      fontSize: theme.typography.bodySmall.fontSize,
       color: theme.colors.text.secondary,
       cursor: 'pointer',
       textDecoration: 'underline',
     }),
     section: css({
-      marginTop: 12,
-      paddingTop: 12,
+      marginTop: theme.spacing(1.5),
+      paddingTop: theme.spacing(1.5),
       borderTop: `1px solid ${theme.colors.border.weak}`,
     }),
     sectionTitle: css({
-      fontSize: 13,
-      fontWeight: 500,
+      fontSize: theme.typography.h5.fontSize,
+      fontWeight: theme.typography.fontWeightMedium,
       color: theme.colors.text.primary,
-      marginBottom: 8,
+      marginBottom: theme.spacing(1),
       display: 'flex',
       alignItems: 'center',
-      gap: 8,
+      gap: theme.spacing(1),
     }),
     sectionHint: css({
-      fontSize: 12,
+      fontSize: theme.typography.bodySmall.fontSize,
       color: theme.colors.text.secondary,
-      marginBottom: 8,
+      marginBottom: theme.spacing(1),
       lineHeight: 1.4,
     }),
     embeddedEditor: css({
-      marginTop: 8,
-      padding: 8,
+      marginTop: theme.spacing(1),
+      padding: theme.spacing(1),
       borderLeft: `2px solid ${theme.colors.border.medium}`,
     }),
     modeToggle: css({
-      marginTop: 8,
-      fontSize: 12,
+      marginTop: theme.spacing(1),
+      fontSize: theme.typography.bodySmall.fontSize,
       color: theme.colors.text.secondary,
       cursor: 'pointer',
       textDecoration: 'underline',
@@ -140,15 +140,24 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
     migrateRow: css({
       display: 'flex',
       alignItems: 'center',
-      gap: 8,
-      marginTop: 8,
+      gap: theme.spacing(1),
+      marginTop: theme.spacing(1),
       flexWrap: 'wrap',
     }),
+    legacyDescription: css({
+      marginBottom: theme.spacing(1),
+    }),
+    migrationNote: css({
+      flexBasis: '100%',
+      marginTop: theme.spacing(0.5),
+      marginBottom: 0,
+      fontSize: theme.typography.bodySmall.fontSize,
+    }),
     statusTag: css({
-      fontSize: 11,
+      fontSize: theme.typography.bodySmall.fontSize,
       lineHeight: 1,
-      padding: '4px 6px',
-      borderRadius: 4,
+      padding: theme.spacing(0.5, 0.75),
+      borderRadius: theme.shape.radius.default,
       border: `1px solid ${theme.colors.border.weak}`,
       color: theme.colors.text.secondary,
       background: theme.colors.background.secondary,
@@ -558,7 +567,7 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
     <div className={styles.section}>
       <div className={styles.sectionTitle}>Legacy refId Reference</div>
       <Alert title="Legacy refId reference mode (Mixed datasource panel only)" severity="warning">
-        <p style={{ marginBottom: 8 }}>
+        <p className={styles.legacyDescription}>
           This row references the result of a sibling query by its <strong>refId</strong>. It only
           works when the panel datasource is set to <code>-- Mixed --</code> and the referenced
           query lives in the same panel. Since Grafana 13, non-Mixed panels force every target to
@@ -598,7 +607,7 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
             >
               Cancel
             </Button>
-            <p style={{ flexBasis: '100%', marginTop: 4, marginBottom: 0, fontSize: 12 }}>
+            <p className={styles.migrationNote}>
               <strong>Note:</strong> time-shift rows, alias settings and Process TimeShift are kept
               as-is. The actual query payload will be empty after migration — re-build it in the
               embedded native editor (we can&apos;t auto-clone the referenced query because the
