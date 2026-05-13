@@ -1,70 +1,74 @@
-# 2.1.0 (2026-04-28)
+# Changelog
 
-### Features and enhancements
+## [v2.1.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/v2.1.0) (2026-05-13)
 
-- **Grafana 13+ compatibility (non-breaking)** — the QueryEditor now operates in three modes driven by the query data shape:
-  - **Self-contained** (recommended) — pick a Target Datasource and the plugin embeds its **native** query editor (PromQL autocomplete, ES bucket aggs, LogQL, SQL, etc.). Works on any panel datasource, no `-- Mixed --` requirement, and is required for Grafana Alerting.
-  - **Legacy refId reference** (backward compatible) — pre-Grafana 13 / Mixed-panel dashboards keep working untouched. Old queries that only have a `query` (refId) field auto-fall into this mode.
-  - **Empty** — friendly onboarding hint for brand-new queries.
-- **One-click Migrate button** in legacy mode — swaps refId reference for a chosen Target Datasource while preserving timeShifts, alias settings and Process TimeShift.
-- **Backend `_runSelfContained` flow** — each target carries its own `datasourceUid` + `targetQueryJSON` and produces N frames per timeShift entry (empty Amount = base series). The legacy `_compareQuery` path is untouched.
-- **Embedded native editor fallback** — datasources without a contributed `QueryEditor` component still work via a raw JSON textarea.
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.1.0...v2.1.0)
 
-### Notes
+- chore: optimize release github workflow [\#29](https://github.com/leoswing/comparequeries-datasource-rc/pull/29) ([leoswing](https://github.com/leoswing))
+- feat: optimize backend httpClient and frontend style sttings [\#28](https://github.com/leoswing/comparequeries-datasource-rc/pull/28) ([leoswing](https://github.com/leoswing))
 
-- `query` (refId reference) is marked `@deprecated` in the schema but **fully supported at runtime** for backward compatibility. Dashboards from 2.0.x require zero migration to upgrade.
+## [2.1.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/2.1.0) (2026-05-08)
 
-# 2.0.2 (2024-07-10)
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.0.3...2.1.0)
 
-## Bug fixes
+- Uninstalled after update of Home Assistant [\#21](https://github.com/leoswing/comparequeries-datasource-rc/issues/21)
+- Issue with compareQueries in Grafana: Missing Queries in Panel [\#20](https://github.com/leoswing/comparequeries-datasource-rc/issues/20)
+- 多个es query添加compare时，如果时间偏移量一致只显示最后一个compare的数据 [\#18](https://github.com/leoswing/comparequeries-datasource-rc/issues/18)
+- Unable to add new field from calulation/binary transform a series from CompareQueries  [\#12](https://github.com/leoswing/comparequeries-datasource-rc/issues/12)
+- Dashboards: Comparing with Multiple Fields Results in Identical Field Names in Comparison Output [\#11](https://github.com/leoswing/comparequeries-datasource-rc/issues/11)
 
-- Fix `Amount` field validation issue when using with variable inside
+- Fix/grafana submission scan errors [\#26](https://github.com/leoswing/comparequeries-datasource-rc/pull/26) ([leoswing](https://github.com/leoswing))
+- docs: upgrade plugin docs [\#25](https://github.com/leoswing/comparequeries-datasource-rc/pull/25) ([leoswing](https://github.com/leoswing))
+- chore: fix release scripts [\#24](https://github.com/leoswing/comparequeries-datasource-rc/pull/24) ([leoswing](https://github.com/leoswing))
+- Refactor: add Grafana 13 mixed mode support, and Grafana alert is now available in the plugin [\#23](https://github.com/leoswing/comparequeries-datasource-rc/pull/23) ([leoswing](https://github.com/leoswing))
 
-# 2.0.1 (2024-07-04)
+## [2.0.3](https://github.com/leoswing/comparequeries-datasource-rc/tree/2.0.3) (2024-11-20)
 
-### Features and enhancements
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.0.2...2.0.3)
 
-- Add validation for amount input field
-- Sign plugin in Grafana plugin market, [plugin details](https://grafana.com/grafana/plugins/leoswing-comparequeries-datasource/)
-- Add plugin sign github action config
+- can not have two curves with the same time shift [\#10](https://github.com/leoswing/comparequeries-datasource-rc/issues/10)
 
-# 2.0.0 (2024-06-25)
+- fix: fix style in queryEditor [\#16](https://github.com/leoswing/comparequeries-datasource-rc/pull/16) ([leoswing](https://github.com/leoswing))
+- fix: fix field name display in absolute mode [\#15](https://github.com/leoswing/comparequeries-datasource-rc/pull/15) ([leoswing](https://github.com/leoswing))
 
-### Breaking change
+## [2.0.2](https://github.com/leoswing/comparequeries-datasource-rc/tree/2.0.2) (2024-07-10)
 
-- Refactor the plugin id with `leoswing-comparequeries-datasource`, and signed with public signature level in Grafana.
-- Repo name refactor to `comparequeries-datasource-rc`
-- Package.json name refactor to `leoswing-comparequeries-datasource`
-- Release workflow publish the zip name to formate `${{ env.NAME }}-${{ env.TAG }}.zip`
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.0.1...2.0.2)
 
-# 1.2.0 (2024-06-24)
+## [2.0.1](https://github.com/leoswing/comparequeries-datasource-rc/tree/2.0.1) (2024-07-04)
 
-### Features and enhancements
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.0.0...2.0.1)
 
-- Upgrade QueryEditor data binding logics from query property
+- feat: upgrade plugin details during grafana review [\#9](https://github.com/leoswing/comparequeries-datasource-rc/pull/9) ([leoswing](https://github.com/leoswing))
 
-### Bug fixes
+## [2.0.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/2.0.0) (2024-07-03)
 
-- Fix QueryEditor data model timeShifts lost when refresh issue [#2](https://github.com/leoswing/comparequeries-datasource-rc/issues/2)
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/1.2.0...2.0.0)
 
-# 1.1.0 (2024-06-20)
+- Signature: Version 2.0.0 claims to be signed, but it is unsigned [\#7](https://github.com/leoswing/comparequeries-datasource-rc/issues/7)
+- InfluxDB data source does not show data [\#2](https://github.com/leoswing/comparequeries-datasource-rc/issues/2)
 
-### Features and enhancements
+- feat: upgrade QueryEditor with grafana ui and fix Query ref unchange … [\#8](https://github.com/leoswing/comparequeries-datasource-rc/pull/8) ([leoswing](https://github.com/leoswing))
+- feat: remove hiddenQueries property and upgrade links and screenshots… [\#6](https://github.com/leoswing/comparequeries-datasource-rc/pull/6) ([leoswing](https://github.com/leoswing))
+- refactor\(plugin\): refactor plugin name and config to leoswing-compare… [\#5](https://github.com/leoswing/comparequeries-datasource-rc/pull/5) ([leoswing](https://github.com/leoswing))
 
-- Suit with Grafana 11, remove filterQuery method as it should migrate, see [PR](https://github.com/leoswing/comparequeries-datasource-rc/pull/1)
+## [1.2.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/1.2.0) (2024-06-24)
 
-# 1.0.0 (2024-06-18)
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/1.1.0...1.2.0)
 
-Restructure repo with React based framework support.
+- chore: add sha1 release workflow setting support [\#4](https://github.com/leoswing/comparequeries-datasource-rc/pull/4) ([leoswing](https://github.com/leoswing))
+- fix: fix QueryEditor data model binding issue with the form [\#3](https://github.com/leoswing/comparequeries-datasource-rc/pull/3) ([leoswing](https://github.com/leoswing))
 
-### Features and enhancements
+## [1.1.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/1.1.0) (2024-06-20)
 
-- Restructure codebase with React-based, which could refer to the [tutorial](https://grafana.com/developers/plugin-tools/tutorials/build-a-data-source-plugin)
-- Add alias name as displayName support.
-- `QueryEditor` with React jsx and models supprt.
-- Use `getDataSourceSrv()` and `getTemplateSrv()` import from `'@grafana/runtime'` to fetch dataSourceSrv and templateSrv
-- Remove `MutableField` 和 `ArrayVector` from datasource, and refactor with `Field` and `Array` support.
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/1.0.0...1.1.0)
 
-### Bug fixes
+- feat: remove filterQuery to enable with grafana 11 [\#1](https://github.com/leoswing/comparequeries-datasource-rc/pull/1) ([leoswing](https://github.com/leoswing))
 
-- Solve data point undefined issue when no database is selected.
+## [1.0.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/1.0.0) (2024-06-18)
+
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/021f9f4219938cde9d9f4ccf10a79cca2496f0c1...1.0.0)
+
+
+
+\* *This Changelog was automatically generated by [github_changelog_generator](https://github.com/github-changelog-generator/github-changelog-generator)*
