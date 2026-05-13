@@ -11,9 +11,7 @@ Key features:
 
 - Compatible with Grafana 11, 12, **and 13+**
 - Embeds the **native query editor** of any installed datasource (PromQL autocomplete, ES bucket aggs, LogQL, SQL, etc.) — no more hand-writing JSON
-- Resolves issues with undefined data points
 - Introduces support for timeShift aliases
-- Caches datasource query results to reduce repeated queries when conditions remain the same.
 - **Supports Grafana Alerting** via a backend plugin that proxies time-shifted queries to target datasources
 - **Backward compatible** — pre-Grafana 13 dashboards using the legacy Mixed + refId reference flow continue to work without migration
 
