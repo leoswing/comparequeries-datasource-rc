@@ -2,14 +2,7 @@
 
 ## [v2.1.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/v2.1.0) (2026-05-13)
 
-[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.1.0...v2.1.0)
-
-- chore: optimize release github workflow [\#29](https://github.com/leoswing/comparequeries-datasource-rc/pull/29) ([leoswing](https://github.com/leoswing))
-- feat: optimize backend httpClient and frontend style sttings [\#28](https://github.com/leoswing/comparequeries-datasource-rc/pull/28) ([leoswing](https://github.com/leoswing))
-
-## [2.1.0](https://github.com/leoswing/comparequeries-datasource-rc/tree/2.1.0) (2026-05-08)
-
-[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.0.3...2.1.0)
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/2.0.3...v2.1.0)
 
 - Uninstalled after update of Home Assistant [\#21](https://github.com/leoswing/comparequeries-datasource-rc/issues/21)
 - Issue with compareQueries in Grafana: Missing Queries in Panel [\#20](https://github.com/leoswing/comparequeries-datasource-rc/issues/20)
@@ -17,6 +10,8 @@
 - Unable to add new field from calulation/binary transform a series from CompareQueries  [\#12](https://github.com/leoswing/comparequeries-datasource-rc/issues/12)
 - Dashboards: Comparing with Multiple Fields Results in Identical Field Names in Comparison Output [\#11](https://github.com/leoswing/comparequeries-datasource-rc/issues/11)
 
+- chore: optimize release github workflow [\#29](https://github.com/leoswing/comparequeries-datasource-rc/pull/29) ([leoswing](https://github.com/leoswing))
+- feat: optimize backend httpClient and frontend style sttings [\#28](https://github.com/leoswing/comparequeries-datasource-rc/pull/28) ([leoswing](https://github.com/leoswing))
 - Fix/grafana submission scan errors [\#26](https://github.com/leoswing/comparequeries-datasource-rc/pull/26) ([leoswing](https://github.com/leoswing))
 - docs: upgrade plugin docs [\#25](https://github.com/leoswing/comparequeries-datasource-rc/pull/25) ([leoswing](https://github.com/leoswing))
 - chore: fix release scripts [\#24](https://github.com/leoswing/comparequeries-datasource-rc/pull/24) ([leoswing](https://github.com/leoswing))
