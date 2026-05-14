@@ -22,5 +22,5 @@ jobs:
           policy_token: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
           attestation: true
           node-version: "20"
-          use_changelog_generator: true
+          use_changelog_generator: false
           token: ${{ secrets.CHANGELOG_PAT }}
