@@ -167,6 +167,10 @@ func (d *Datasource) executeShiftedQuery(
 		return nil, err
 	}
 
+	for _, frame := range frames {
+		d.filterFrameByRange(frame, queryFrom, queryTo)
+	}
+
 	alias := ts.Alias
 	if alias == "" {
 		alias = ts.Value
@@ -191,6 +195,66 @@ func (d *Datasource) executeShiftedQuery(
 	}
 
 	return frames, nil
+}
+
+func (d *Datasource) filterFrameByRange(frame *data.Frame, from, to time.Time) {
+	if frame == nil {
+		return
+	}
+
+	fromMs := from.UnixMilli()
+	toMs := to.UnixMilli()
+	if toMs < fromMs {
+		return
+	}
+
+	timeIdx := -1
+	for i, field := range frame.Fields {
+		if field == nil {
+			continue
+		}
+		if field.Type() == data.FieldTypeTime || field.Type() == data.FieldTypeNullableTime {
+			timeIdx = i
+			break
+		}
+	}
+	if timeIdx < 0 {
+		return
+	}
+
+	rowLen, err := frame.RowLen()
+	if err != nil {
+		d.logger.Warn("Failed to get frame row length for range filtering", "error", err)
+		return
+	}
+
+	for i := rowLen - 1; i >= 0; i-- {
+		v := frame.At(timeIdx, i)
+		if v == nil {
+			frame.DeleteRow(i)
+			continue
+		}
+
+		var ts time.Time
+		switch t := v.(type) {
+		case time.Time:
+			ts = t
+		case *time.Time:
+			if t == nil {
+				frame.DeleteRow(i)
+				continue
+			}
+			ts = *t
+		default:
+			frame.DeleteRow(i)
+			continue
+		}
+
+		ms := ts.UnixMilli()
+		if ms < fromMs || ms > toMs {
+			frame.DeleteRow(i)
+		}
+	}
 }
 
 // applyAlias renames numeric field names/display names to include the time shift alias,
