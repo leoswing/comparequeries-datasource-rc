@@ -283,6 +283,14 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
       return { data: [] };
     }
 
+    // Some datasources (for example CSV) can ignore query range and return full history.
+    // Enforce range filtering here so legend/reduce calcs are based on the intended shifted window.
+    if (queryRange?.from && queryRange?.to) {
+      result.data.forEach((line: any) => {
+        this._filterLineByRange(line, queryRange.from, queryRange.to);
+      });
+    }
+
     if (isShifted) {
       const alias = this.templateSrv.replace(ts.alias, options.scopedVars) || shiftValue;
       const aliasType = ts.aliasType || 'suffix';
@@ -303,6 +311,132 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     }
 
     return result;
+  }
+
+  _filterLineByRange(line: any, from: any, to: any): void {
+    const fromMs = this._toEpochMs(from);
+    const toMs = this._toEpochMs(to);
+    if (fromMs === undefined || toMs === undefined) {
+      return;
+    }
+
+    if (line.datapoints && Array.isArray(line.datapoints)) {
+      line.datapoints = line.datapoints.filter((datapoint: any[]) => {
+        const ts = this._toEpochMs(datapoint?.[1]);
+        return ts !== undefined && ts >= fromMs && ts <= toMs;
+      });
+      return;
+    }
+
+    if (line.fields && Array.isArray(line.fields) && line.fields.length > 0) {
+      const timeField = line.fields.find((field: Record<string, any>) => field.type === FieldType.time);
+      if (!timeField) {
+        return;
+      }
+
+      const len = this._getFieldValuesLength(timeField, line.length, line.fields);
+      const keepIndexes: number[] = [];
+
+      for (let i = 0; i < len; i++) {
+        const value = this._getFieldValueAt(timeField, i);
+        const ts = this._toEpochMs(value);
+        if (ts !== undefined && ts >= fromMs && ts <= toMs) {
+          keepIndexes.push(i);
+        }
+      }
+
+      if (keepIndexes.length === len) {
+        return;
+      }
+
+      line.fields = line.fields.map((field: Record<string, any>) => {
+        const nextValues = keepIndexes.map((idx) => this._getFieldValueAt(field, idx));
+        return {
+          ...field,
+          values: nextValues,
+        };
+      });
+      line.length = keepIndexes.length;
+      return;
+    }
+
+    if (line.type === 'table' && Array.isArray(line.rows)) {
+      line.rows = line.rows.filter((row: any[]) => {
+        const ts = this._toEpochMs(row?.[0]);
+        return ts !== undefined && ts >= fromMs && ts <= toMs;
+      });
+    }
+  }
+
+  _getFieldValuesLength(field: any, fallbackLength?: number, allFields?: any[]): number {
+    if (typeof field?.values?.length === 'number') {
+      return field.values.length;
+    }
+    if (Array.isArray(field?.values)) {
+      return field.values.length;
+    }
+    if (typeof field?.values?.toArray === 'function') {
+      const arr = field.values.toArray();
+      if (Array.isArray(arr)) {
+        return arr.length;
+      }
+    }
+    if (Array.isArray(field?.values?.buffer)) {
+      return field.values.buffer.length;
+    }
+    if (Array.isArray(allFields) && allFields.length > 0) {
+      for (const candidate of allFields) {
+        if (typeof candidate?.values?.length === 'number') {
+          return candidate.values.length;
+        }
+        if (Array.isArray(candidate?.values)) {
+          return candidate.values.length;
+        }
+        if (typeof candidate?.values?.toArray === 'function') {
+          const arr = candidate.values.toArray();
+          if (Array.isArray(arr)) {
+            return arr.length;
+          }
+        }
+        if (Array.isArray(candidate?.values?.buffer)) {
+          return candidate.values.buffer.length;
+        }
+      }
+    }
+    if (typeof fallbackLength === 'number') {
+      return fallbackLength;
+    }
+    return 0;
+  }
+
+  _getFieldValueAt(field: any, index: number): any {
+    return typeof field?.values?.get === 'function'
+      ? field.values.get(index)
+      : field?.values?.[index];
+  }
+
+  _toEpochMs(value: any): number | undefined {
+    if (value === null || typeof value === 'undefined') {
+      return undefined;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : undefined;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    }
+
+    if (typeof value?.valueOf === 'function') {
+      const ms = value.valueOf();
+      if (typeof ms === 'number' && Number.isFinite(ms)) {
+        return ms;
+      }
+    }
+
+    return undefined;
   }
 
   _buildShiftedRange(range: any, shiftValue: string): any {
@@ -370,8 +504,9 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
       });
     } else if (line.fields && line.fields.length > 0) {
       // New data frame format
-      const unshiftedTimeField = line.fields.find((field: Record<string, any>) => field.type === 'time');
-      if (unshiftedTimeField) {
+      const timeFieldIndex = line.fields.findIndex((field: Record<string, any>) => field.type === 'time');
+      if (timeFieldIndex >= 0) {
+        const unshiftedTimeField = line.fields[timeFieldIndex];
         const timeField: Field = {
           name: unshiftedTimeField.name,
           type: unshiftedTimeField.type,
@@ -379,13 +514,20 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
           labels: unshiftedTimeField.labels,
           values: [],
         };
-        for (let i = 0; i < line.length; i++) {
+
+        const valuesLength = this._getFieldValuesLength(unshiftedTimeField, line.length, line.fields);
+
+        for (let i = 0; i < valuesLength; i++) {
           const v: any = typeof unshiftedTimeField.values?.get === 'function'
             ? unshiftedTimeField.values.get(i)
             : unshiftedTimeField.values?.[i];
-          timeField.values[i] = v + shiftMs;
+          if (typeof v === 'number') {
+            timeField.values[i] = v + shiftMs;
+          } else {
+            timeField.values[i] = v;
+          }
         }
-        line.fields[0] = timeField;
+        line.fields[timeFieldIndex] = timeField;
       }
     }
   }
