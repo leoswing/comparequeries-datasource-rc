@@ -1,74 +1,68 @@
-[![CodeQL](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml) ![](https://img.shields.io/github/v/release/leoswing/comparequeries-datasource-rc?style=plastic%253Flabel=repo)
+# CompareQueries for Grafana
 
-# Overview
-
-This data source plugin enables data comparison capabilities by supporting queries from multiple data sources. It allows you to use custom time shifts to display data from different time ranges within a single graph.
-
+[![CodeQL](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml/badge.svg)](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/pr-codeql-analysis-typescript.yml)
+![](https://img.shields.io/github/v/release/leoswing/comparequeries-datasource-rc?style=plastic%253Flabel=repo)
 [![License](https://img.shields.io/github/license/leoswing/comparequeries-datasource-rc)](LICENSE)
 ![Drone](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/release.yaml/badge.svg)
 
-Key features:
+Compare current metrics with yesterday, last week, or any custom time shift across Grafana datasources — in one panel.
 
-- Compatible with Grafana 11, 12, **and 13+**
-- Embeds the **native query editor** of any installed datasource (PromQL autocomplete, ES bucket aggs, LogQL, SQL, etc.) — no more hand-writing JSON
-- Introduces support for timeShift aliases
-- **Supports Grafana Alerting** via a backend plugin that proxies time-shifted queries to target datasources
-- **Backward compatible** — pre-Grafana 13 dashboards using the legacy Mixed + refId reference flow continue to work without migration
+CompareQueries is a Grafana datasource plugin for time-shifted query comparison. It lets you compare Prometheus, Loki, Elasticsearch, SQL and other datasource queries using their native query editors, with support for dashboards and Grafana Alerting.
 
-![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
+[Install from Grafana Plugin Catalog](https://grafana.com/grafana/plugins/leoswing-comparequeries-datasource/) · [GitHub Releases](https://github.com/leoswing/comparequeries-datasource-rc/releases)
 
+![Plugin snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
-# Compatibility notes (2.1.0)
+## Compatibility
 
-- Plugin id is `leoswing-comparequeries-datasource` and uses signature verification.
-- New dashboards should use the recommended dashboard flow described below.
-- Legacy RefId usage is kept only for Grafana versions below 13 with existing CompareQueries RefId dashboards.
-- Grafana Alerting is supported in 2.1.0 through backend execution.
+- Available as a signed Grafana marketplace plugin: `leoswing-comparequeries-datasource`.
+- Supports Grafana 11, 12, and 13+.
+- Use the Target Datasource flow for all new dashboards; Grafana 13+ requires it because legacy RefId queries are no longer supported.
+- Supports Grafana Alerting through backend query execution.
+- Existing Grafana 11/12 dashboards that use the legacy RefId flow continue to work.
 
+## Why CompareQueries?
 
-# Download
+Grafana is great for dashboards, but comparing the same query across different time ranges can become repetitive, especially when you need day-over-day, week-over-week, or release-before-after analysis.
 
-You can download and install this grafana plugin using various options:
+CompareQueries helps you:
+
+- Compare current data with yesterday, last week, or any custom time shift.
+- Use the native query editor of Prometheus, Loki, Elasticsearch, SQL and other datasources.
+- Display multiple shifted series in a single Grafana panel.
+- Reuse the same comparison logic in Grafana Alerting.
+
+## Installation
+
+Install CompareQueries using any of the following options:
 
 - From [Grafana plugin catalog](https://grafana.com/grafana/plugins/leoswing-comparequeries-datasource/)
-- From [Github release page](https://github.com/leoswing/comparequeries-datasource-rc/releases)
-- Using grafana cli
+- From the [GitHub release page](https://github.com/leoswing/comparequeries-datasource-rc/releases)
+- Using Grafana CLI
 
-   `grafana-cli plugins install leoswing-comparequeries-datasource`
+  ```bash
+  grafana-cli plugins install leoswing-comparequeries-datasource
+  ```
 
-- Using docker
+- Using Docker
 
-    `docker run -p 3000:3000 -e "GF_INSTALL_PLUGINS=leoswing-comparequeries-datasource" grafana/grafana:latest`
+  ```bash
+  docker run -p 3000:3000 -e "GF_INSTALL_PLUGINS=leoswing-comparequeries-datasource" grafana/grafana:latest
+  ```
 
+For detailed instructions on how to install the plugin on Grafana Cloud or locally, see the [Grafana plugin installation docs](https://grafana.com/docs/grafana/latest/administration/plugin-management/).
 
-For detailed instructions on how to install the plugin on Grafana Cloud or locally, please check out the [Plugin installation docs](https://grafana.com/docs/grafana/latest/administration/plugin-management/).
+## Quick Start
 
+1. Install CompareQueries and add it in `Connections -> Data sources`.
+2. Add a target datasource, such as Prometheus, Loki, Elasticsearch, or SQL.
+3. Create a dashboard panel and set the panel datasource to `-- Mixed --`.
+4. Add a query row with `CompareQueries`.
+5. Select the target datasource, build the query with its native editor, and add time shifts such as `1d`, `1w`, or `30m`.
 
-# Quick start
+## How It Works
 
-For most users, this is all you need:
-
-1. Add a real target datasource first, such as Elasticsearch, Prometheus, or Loki.
-2. Add the **CompareQueries** datasource in **Connections -> Data sources**.
-3. Keep `Authentication` as `No Authentication` by default, then click **Save & test**.
-4. Create a dashboard panel and set panel datasource to `-- Mixed --`.
-5. Add a query row and select **CompareQueries** as that row's datasource.
-6. Pick **Target Datasource** inside CompareQueries, build query inline, add **Time-shift** rows (`1d`, `1w`, etc.), then save.
-
-## Which path should I use?
-
-- New dashboard: use **Recommended dashboard usage**.
-- Existing 2.0.x dashboard on Grafana < 13: keep **Legacy RefId usage**.
-- Existing 2.0.x dashboard on Grafana 13+: use **Recommended dashboard usage**.
-- Need alerting: use **Grafana Alerting usage**.
-
-## Usage patterns
-
-The plugin supports three common usage patterns:
-
-## 1. Recommended dashboard usage
-
-Use this for new dashboards, including Grafana 13+.
+Use this for all new dashboards on Grafana 11, 12, and 13+.
 
 In a `-- Mixed --` panel, add a **CompareQueries** query row, pick a **Target Datasource**, build the target query inline, and add one or more **Time-shift** rows.
 
@@ -78,31 +72,7 @@ The plugin runs the embedded query once per Time-shift row, applies the alias ru
 
 ![Recommended dashboard usage](./img/plugin-usage-mixed.png)
 
-## 2. Legacy RefId usage (Grafana < 13 existing dashboards only)
-
-Use this only if you are on Grafana versions below 13 and already have dashboards using the old CompareQueries RefId workflow.
-
-In this flow, panel datasource is `-- Mixed --`, one query (for example `refId: A`) is the real datasource query, and a sibling **CompareQueries** row time-shifts that query by referencing `A`.
-
-For Grafana 13+, use the recommended dashboard flow instead: keep the panel datasource as `-- Mixed --`, add a CompareQueries row, then select **Target Datasource** inside CompareQueries.
-
-The QueryEditor auto-detects legacy RefId queries and can show a **Migrate to Target Datasource** button:
-
-- Migration **preserves** all Time-shift rows, alias type, delimiter and Process TimeShift settings.
-- After migration you re-build the query in the embedded native editor (the QueryEditor API doesn't expose sibling targets, so the payload can't be auto-cloned).
-- Migrating converts the query to the recommended inline Target Datasource flow.
-
-> **When should I migrate?** Migrate when you want the newer inline Target Datasource editor or Grafana Alerting.
-
-The screenshot below shows the old RefId-based workflow used by existing Grafana 12 or earlier dashboards:
-
-![Legacy RefId usage on Grafana 12 or earlier](./img/usage-comparequeries.png)
-
-## 3. Grafana Alerting usage
-
-Alerting runs through backend execution. Configure the CompareQueries query directly with **Target Datasource**, **Time shift**, and query inline. See [Grafana Alerting](#grafana-alerting).
-
-## Datasource settings
+## Datasource Settings
 
 Configure the CompareQueries datasource in **Connections -> Data sources**.
 
@@ -114,11 +84,11 @@ Configure the CompareQueries datasource in **Connections -> Data sources**.
 
 ![Datasource settings](./img/datasource-settings.png)
 
-# Migration Guide (2.0.x -> 2.1.0)
+## Migration Guide
 
-Existing Grafana 11/12 dashboards keep working after upgrade.
+Existing Grafana 11/12 dashboards created with the legacy RefId workflow can keep working. In that flow, a CompareQueries row time-shifts another query in the same `-- Mixed --` panel by referencing its `refId`.
 
-For Grafana 13+, use the recommended dashboard flow instead of legacy RefId usage.
+For Grafana 13+ or any new dashboard, use the Target Datasource flow instead. The editor can help migrate a legacy RefId query to the newer flow.
 
 To migrate in the editor:
 
@@ -132,12 +102,15 @@ Migration keeps time-shift rows, alias settings, delimiter, Process TimeShift, a
 
 Rollback: use **Dashboard settings -> Versions -> Restore**.
 
+Legacy RefId workflow on Grafana 12 or earlier:
 
-# Grafana Alerting
+![Legacy RefId usage on Grafana 12 or earlier](./img/usage-comparequeries.png)
+
+## Grafana Alerting
 
 Alerting is supported in backend mode. Configure the CompareQueries query directly with Target Datasource, Time shift, and query inline.
 
-## Minimal setup
+### Minimal Setup
 
 1. Keep datasource auth as `No Authentication` by default.
 2. If backend or alerting requests fail authentication, switch to `Basic authentication` and set:
@@ -151,24 +124,21 @@ Reference alert rule setup:
 
 ![Alert config](./img/alert-config.png)
 
-## Finding datasource UID
+For advanced alert troubleshooting, datasource UID lookup, and payload examples, see `developer-guide.md`.
 
-```bash
-GRAFANA_BASE_URL=<grafana-base-url> # local default: http://localhost:3000
-curl -s -u admin:<password> "$GRAFANA_BASE_URL/api/datasources" | python3 -m json.tool | grep -E '"name"|"type"|"uid"'
-```
-
-For advanced alert troubleshooting and payload examples, see `developer-guide.md`.
-
-
-# Contributing
+## Contributing
 
 If you're interested in contributing to the project:
 
 - Start by reading the [Contributing guide](./CONTRIBUTING.md).
 - Learn how to set up your local environment, in our [Developer guide](./developer-guide.md).
 
+## Community
 
-# License
+If CompareQueries saves you time building Grafana dashboards, please consider giving the project a star.
+
+Issues, feature requests, dashboard examples, and documentation improvements are welcome.
+
+## License
 
 This plugin is distributed under Apache-2.0 License.
