@@ -5,11 +5,9 @@
 [![License](https://img.shields.io/github/license/leoswing/comparequeries-datasource-rc)](LICENSE)
 ![Drone](https://github.com/leoswing/comparequeries-datasource-rc/actions/workflows/release.yaml/badge.svg)
 
-Compare current metrics with yesterday, last week, or any custom time shift across Grafana datasources — in one panel.
+CompareQueries is a Grafana datasource plugin for comparing current metrics with yesterday, last week, or any custom time shift in one panel.
 
-CompareQueries is a Grafana datasource plugin for time-shifted query comparison. It lets you compare Prometheus, Loki, Elasticsearch, SQL and other datasource queries using their native query editors, with support for dashboards and Grafana Alerting.
-
-[Install from Grafana Plugin Catalog](https://grafana.com/grafana/plugins/leoswing-comparequeries-datasource/) · [GitHub Releases](https://github.com/leoswing/comparequeries-datasource-rc/releases)
+It works with Prometheus, Loki, Elasticsearch, SQL, and other datasources through their native query editors, with support for dashboards and Grafana Alerting.
 
 ![Plugin snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
