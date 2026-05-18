@@ -131,11 +131,13 @@ If you're interested in contributing to the project:
 - Start by reading the [Contributing guide](./CONTRIBUTING.md).
 - Learn how to set up your local environment, in our [Developer guide](./developer-guide.md).
 
-## Community
+## ⭐️ Project assistance
 
-If CompareQueries saves you time building Grafana dashboards, please consider giving the project a star.
+If you want to say thank you or/and support active development of the plugin:
 
-Issues, feature requests, dashboard examples, and documentation improvements are welcome.
+- Add a [GitHub Star](https://github.com/leoswing/comparequeries-datasource-rc) to the project.
+- Write articles about project on [Dev.to](https://dev.to/), [Medium](https://medium.com/) or personal blog.
+- Issues, feature requests, dashboard examples, and documentation improvements are welcome.
 
 ## License
 
