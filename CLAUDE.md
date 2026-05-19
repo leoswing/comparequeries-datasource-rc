@@ -1,5 +1,3 @@
-## Agent entry
+## Project knowledge
 
-Use `AGENTS.md` as the single source of truth for this repository.
-
-Read `AGENTS.md` before making any code or workflow changes.
+This repository contains a **Grafana plugin**. You must Read @./.config/AGENTS/instructions.md before doing changes.

@@ -13,8 +13,11 @@ import path from 'path';
 import ReplaceInFileWebpackPlugin from 'replace-in-file-webpack-plugin';
 import { Configuration } from 'webpack';
 
-import { getPackageJson, getPluginJson, hasReadme, getEntries, isWSL } from './utils';
-import { SOURCE_DIR, DIST_DIR } from './constants';
+import { copyFilePatterns } from '../bundler/copyFiles';
+import { externals } from '../bundler/externals';
+import { getPackageJson, getPluginJson, getEntries, isWSL } from '../bundler/utils';
+import { SOURCE_DIR, DIST_DIR } from '../bundler/constants';
+import { BuildModeWebpackPlugin } from './BuildModeWebpackPlugin';
 
 const pluginJson = getPluginJson();
 
@@ -23,7 +26,8 @@ const config = async (env): Promise<Configuration> => {
     cache: {
       type: 'filesystem',
       buildDependencies: {
-        config: [__filename],
+        // __filename doesn't work in Node 24.
+        config: [path.resolve(process.cwd(), '.config', 'webpack', 'webpack.config.ts')],
       },
     },
 
@@ -33,43 +37,7 @@ const config = async (env): Promise<Configuration> => {
 
     entry: await getEntries(),
 
-    externals: [
-      'lodash',
-      'jquery',
-      'moment',
-      'slate',
-      'emotion',
-      '@emotion/react',
-      '@emotion/css',
-      'prismjs',
-      'slate-plain-serializer',
-      '@grafana/slate-react',
-      'react',
-      'react-dom',
-      'react-redux',
-      'redux',
-      'rxjs',
-      'react-router',
-      'react-router-dom',
-      'd3',
-      'angular',
-      '@grafana/ui',
-      '@grafana/runtime',
-      '@grafana/data',
-
-      // Mark legacy SDK imports as external if their name starts with the "grafana/" prefix
-      ({ request }, callback) => {
-        const prefix = 'grafana/';
-        const hasPrefix = (request) => request.indexOf(prefix) === 0;
-        const stripPrefix = (request) => request.substr(prefix.length);
-
-        if (hasPrefix(request)) {
-          return callback(undefined, stripPrefix(request));
-        }
-
-        callback();
-      },
-    ],
+    externals,
 
     mode: env.production ? 'production' : 'development',
 
@@ -140,23 +108,9 @@ const config = async (env): Promise<Configuration> => {
     },
 
     plugins: [
+      new BuildModeWebpackPlugin(),
       new CopyWebpackPlugin({
-        patterns: [
-          // If src/README.md exists use it; otherwise the root README
-          // To `compiler.options.output`
-          { from: hasReadme() ? 'README.md' : '../README.md', to: '.', force: true },
-          { from: 'plugin.json', to: '.' },
-          { from: '../LICENSE', to: '.' },
-          { from: '../CHANGELOG.md', to: '.', force: true },
-          { from: '**/*.json', to: '.' }, // TODO<Add an error for checking the basic structure of the repo>
-          { from: '**/*.svg', to: '.', noErrorOnMissing: true }, // Optional
-          { from: '**/*.png', to: '.', noErrorOnMissing: true }, // Optional
-          { from: '**/*.html', to: '.', noErrorOnMissing: true }, // Optional
-          { from: 'img/**/*', to: '.', noErrorOnMissing: true }, // Optional
-          { from: 'libs/**/*', to: '.', noErrorOnMissing: true }, // Optional
-          { from: 'static/**/*', to: '.', noErrorOnMissing: true }, // Optional
-          { from: '**/query_help.md', to: '.', noErrorOnMissing: true }, // Optional
-        ],
+        patterns: copyFilePatterns,
       }),
       // Replace certain template-variables in the README and plugin.json
       new ReplaceInFileWebpackPlugin([

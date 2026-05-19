@@ -1,0 +1,6 @@
+version: '2'
+linters:
+  exclusions:
+    paths:
+      - node_modules
+      - dist
