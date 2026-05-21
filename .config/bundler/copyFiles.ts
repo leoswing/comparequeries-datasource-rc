@@ -1,4 +1,10 @@
-import { hasReadme } from './utils';
+import { getPluginJson, hasReadme } from './utils.ts';
+
+const pluginJson = getPluginJson();
+const logoPaths: string[] = Array.from(new Set([pluginJson.info?.logos?.large, pluginJson.info?.logos?.small])).filter(
+  Boolean
+);
+const screenshotPaths: string[] = pluginJson.info?.screenshots?.map((s: { path: string }) => s.path) || [];
 
 export const copyFilePatterns = [
   // If src/README.md exists use it; otherwise the root README
@@ -7,12 +13,11 @@ export const copyFilePatterns = [
   { from: 'plugin.json', to: '.' },
   { from: '../LICENSE', to: '.' },
   { from: '../CHANGELOG.md', to: '.', force: true },
-  { from: '**/*.json', to: '.' }, // TODO<Add an error for checking the basic structure of the repo>
-  { from: '**/*.svg', to: '.', noErrorOnMissing: true }, // Optional
-  { from: '**/*.png', to: '.', noErrorOnMissing: true }, // Optional
-  { from: '**/*.html', to: '.', noErrorOnMissing: true }, // Optional
-  { from: 'img/**/*', to: '.', noErrorOnMissing: true }, // Optional
-  { from: 'libs/**/*', to: '.', noErrorOnMissing: true }, // Optional
-  { from: 'static/**/*', to: '.', noErrorOnMissing: true }, // Optional
-  { from: '**/query_help.md', to: '.', noErrorOnMissing: true }, // Optional
+  { from: '**/*.json', to: '.' },
+  { from: '**/query_help.md', to: '.', noErrorOnMissing: true },
+  ...logoPaths.map((logoPath) => ({ from: logoPath, to: logoPath })),
+  ...screenshotPaths.map((screenshotPath) => ({
+    from: screenshotPath,
+    to: screenshotPath,
+  })),
 ];

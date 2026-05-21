@@ -3,6 +3,8 @@ import type { Configuration, ExternalItemFunctionData } from 'webpack';
 type ExternalsType = Configuration['externals'];
 
 export const externals: ExternalsType = [
+  // Required for dynamic publicPath resolution
+  { 'amd-module': 'module' },
   'lodash',
   'jquery',
   'moment',
@@ -14,17 +16,19 @@ export const externals: ExternalsType = [
   'slate-plain-serializer',
   '@grafana/slate-react',
   'react',
+  'react/jsx-runtime',
+  'react/jsx-dev-runtime',
   'react-dom',
   'react-redux',
   'redux',
   'rxjs',
+  'i18next',
   'react-router',
-  'react-router-dom',
   'd3',
   'angular',
-  '@grafana/ui',
-  '@grafana/runtime',
-  '@grafana/data',
+  /^@grafana\/ui/i,
+  /^@grafana\/runtime/i,
+  /^@grafana\/data/i,
 
   // Mark legacy SDK imports as external if their name starts with the "grafana/" prefix
   ({ request }: ExternalItemFunctionData, callback: (error?: Error, result?: string) => void) => {
