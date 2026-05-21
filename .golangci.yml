@@ -3,4 +3,3 @@ linters:
   exclusions:
     paths:
       - node_modules
-      - dist
