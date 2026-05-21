@@ -131,6 +131,10 @@ If you're interested in contributing to the project:
 - Start by reading the [Contributing guide](./CONTRIBUTING.md).
 - Learn how to set up your local environment, in our [Developer guide](./developer-guide.md).
 
+### Agent entry
+
+If you're using coding agents (Cursor, Claude Code, Gemini Code Assist), read [AGENTS.md](./AGENTS.md) first.
+
 ## ⭐️ Project assistance
 
 If you want to say thank you or/and support active development of the plugin:
