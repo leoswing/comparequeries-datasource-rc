@@ -4,7 +4,7 @@
 
 [Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/v2.1.0...v2.1.1)
 
-- fix: improve Grafana 9 compatibility for UI theme tokens with safe fallback handling.
+- fix: improve Grafana 9 compatibility for UI theme tokens with safe fallback handling(mySql datasource).
 - fix: improve SQL/MySQL expression compatibility guidance for wide-series inputs.
 - chore: update compatibility wording and release metadata for submission.
 
