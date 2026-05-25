@@ -14,8 +14,9 @@ It works with Prometheus, Loki, Elasticsearch, SQL, and other datasources throug
 ## Compatibility
 
 - Available as a signed Grafana marketplace plugin: `leoswing-comparequeries-datasource`.
-- Supports Grafana 11, 12, and 13+.
-- Use the Target Datasource flow for all new dashboards; Grafana 13+ requires it because legacy RefId queries are no longer supported.
+- Minimum supported Grafana version (plugin manifest): `8.4.0+`.
+- Validated in our current workflow on Grafana `11.x`, `12.x`, and `13.x`.
+- Use the Target Datasource flow for all new dashboards; on Grafana 13+, legacy RefId queries are no longer supported.
 - Supports Grafana Alerting through backend query execution.
 - Existing Grafana 11/12 dashboards that use the legacy RefId flow continue to work.
 
@@ -60,7 +61,7 @@ For detailed instructions on how to install the plugin on Grafana Cloud or local
 
 ## How It Works
 
-Use this for all new dashboards on Grafana 11, 12, and 13+.
+Use this for all new dashboards on Grafana 11.x, 12.x, and 13.x, and it is the recommended flow for newer versions.
 
 In a `-- Mixed --` panel, add a **CompareQueries** query row, pick a **Target Datasource**, build the target query inline, and add one or more **Time-shift** rows.
 
