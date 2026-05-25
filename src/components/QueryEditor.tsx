@@ -157,7 +157,8 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
       fontSize: theme.typography.bodySmall.fontSize,
       lineHeight: 1,
       padding: theme.spacing(0.5, 0.75),
-      borderRadius: theme.shape.radius.default,
+      // Grafana 9 theme may not expose `shape.radius.default`.
+      borderRadius: theme.shape?.radius?.default ?? 4,
       border: `1px solid ${theme.colors.border.weak}`,
       color: theme.colors.text.secondary,
       background: theme.colors.background.secondary,
