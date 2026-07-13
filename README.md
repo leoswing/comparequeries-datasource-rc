@@ -18,6 +18,7 @@ It works with Prometheus, Loki, Elasticsearch, SQL, and other datasources throug
 - Validated in our current workflow on Grafana `11.x`, `12.x`, and `13.x`.
 - Use the Target Datasource flow for all new dashboards; on Grafana 13+, legacy RefId queries are no longer supported.
 - Supports Grafana Alerting through backend query execution.
+- Supports Grafana panel **Math expressions** (v2.1.0+) for dependent calculated graphs — see [Mathematical Expressions](https://github.com/leoswing/comparequeries-datasource-rc/wiki/Mathematical-Expressions).
 - Existing Grafana 11/12 dashboards that use the legacy RefId flow continue to work.
 
 ## Why CompareQueries?
@@ -71,12 +72,24 @@ The plugin runs the embedded query once per Time-shift row, applies the alias ru
 
 ![Recommended dashboard usage](./img/plugin-usage-mixed.png)
 
+## Mathematical Expressions
+
+Use CompareQueries with Grafana [Math expressions](https://grafana.com/docs/grafana/latest/panels-visualizations/query-transform-data/expression-queries/) to build dependent calculated graphs (for example day-over-day delta or ratio). This addresses scenarios like [Issue #19](https://github.com/leoswing/comparequeries-datasource-rc/issues/19).
+
+**Requirements (v2.1.0+):**
+
+1. Configure CompareQueries datasource with **Basic authentication** and a **Service Account token** (see Datasource Settings below).
+2. Use a **`-- Mixed --`** panel: base query + CompareQueries shifted query + **Expression** row.
+3. Enable **Process TimeShift** when expressions must align shifted series on the same time axis.
+
+Step-by-step setup, SQL/MySQL wide-series notes, and troubleshooting: **[Wiki — Mathematical Expressions](https://github.com/leoswing/comparequeries-datasource-rc/wiki/Mathematical-Expressions)**.
+
 ## Datasource Settings
 
 Configure the CompareQueries datasource in **Connections -> Data sources**.
 
-- `Authentication (Optional)` defaults to `No Authentication`.
-- Switch to `Basic authentication` only when backend or alerting requests fail authentication.
+- `Authentication (Optional)` defaults to `No Authentication` for simple dashboard viewing.
+- Switch to `Basic authentication` for **Math expressions**, **Alerting**, or when backend proxy requests fail authentication.
 - When `Basic authentication` is selected, configure:
   - `Service Account` token
   - optional `Grafana URL` (only if auto-detection is incorrect)
