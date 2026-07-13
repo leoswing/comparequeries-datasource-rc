@@ -18,7 +18,7 @@ It works with Prometheus, Loki, Elasticsearch, SQL, and other datasources throug
 - Validated in our current workflow on Grafana `11.x`, `12.x`, and `13.x`.
 - Use the Target Datasource flow for all new dashboards; on Grafana 13+, legacy RefId queries are no longer supported.
 - Supports Grafana Alerting through backend query execution.
-- Supports Grafana panel **Math expressions** (v2.1.0+) for dependent calculated graphs — see [Mathematical Expressions](https://github.com/leoswing/comparequeries-datasource-rc/wiki/Mathematical-Expressions).
+- Supports Grafana panel **Math expressions** (v2.1.0+) for dependent calculated graphs — see [Mathematical Expression](https://github.com/leoswing/comparequeries-datasource-rc/wiki/Mathematical-Expression).
 - Existing Grafana 11/12 dashboards that use the legacy RefId flow continue to work.
 
 ## Why CompareQueries?
