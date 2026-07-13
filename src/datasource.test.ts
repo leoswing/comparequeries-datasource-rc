@@ -142,6 +142,55 @@ describe('DataSource', () => {
 
     it('applyTemplateVariables expands nested targetQueryJSON for backend queries', () => {
       mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) =>
+          value.replace(/\$moduleName/g, 'basic-product').replace(/\$environment/g, 'production'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const query = {
+        refId: 'B',
+        query: '',
+        timeShifts: [{ id: 0, value: '1d' }],
+        aliasTypes: [],
+        units: [],
+        process: true,
+        targetQueryJSON: {
+          query: 'type:log AND moduleName: $moduleName',
+          nested: {
+            environment: '$environment',
+            values: ['$moduleName', 1, true],
+          },
+        },
+      };
+      const scopedVars = {
+        moduleName: { value: 'basic-product', text: 'basic-product' },
+        environment: { value: 'production', text: 'production' },
+      };
+      const result = ds.applyTemplateVariables(query, scopedVars);
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'type:log AND moduleName: basic-product',
+        nested: {
+          environment: 'production',
+          values: ['basic-product', 1, true],
+        },
+      });
+      expect(query.targetQueryJSON).toEqual({
+        query: 'type:log AND moduleName: $moduleName',
+        nested: {
+          environment: '$environment',
+          values: ['$moduleName', 1, true],
+        },
+      });
+    });
+
+    it('interpolates a JSON-string target query payload', () => {
+      mockGetTemplateSrv.mockReturnValue({
         replace: (value: string) => value.replace(/\$moduleName/g, 'basic-product'),
       });
 
@@ -151,20 +200,12 @@ describe('DataSource', () => {
         jsonData: {},
       } as any);
 
-      const result = ds.applyTemplateVariables(
-        {
-          refId: 'B',
-          query: '',
-          timeShifts: [{ id: 0, value: '1d' }],
-          aliasTypes: [],
-          units: [],
-          process: true,
-          targetQueryJSON: { query: 'type:log AND moduleName: $moduleName' },
-        },
+      const result = ds._interpolateTargetQueryJSON(
+        '{"query":"moduleName:$moduleName"}',
         { moduleName: { value: 'basic-product', text: 'basic-product' } }
       );
 
-      expect(result.targetQueryJSON).toEqual({ query: 'type:log AND moduleName: basic-product' });
+      expect(result).toEqual({ query: 'moduleName:basic-product' });
     });
 
     it('filters invalid non-empty shifts when at least one valid shift exists', async () => {
