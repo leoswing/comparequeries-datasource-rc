@@ -7,6 +7,7 @@ import {
   DataFrame,
   FieldType,
   Field,
+  ScopedVars,
 } from '@grafana/data';
 import { getDataSourceSrv, DataSourceSrv, getTemplateSrv, TemplateSrv } from '@grafana/runtime';
 
@@ -30,6 +31,25 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     this.meta = instanceSettings.meta;
     this.datasourceSrv = getDataSourceSrv();
     this.templateSrv = getTemplateSrv();
+  }
+
+  // Grafana calls this before backend QueryData (expressions / alerting). Nested targetQueryJSON
+  // is not auto-interpolated — we must expand dashboard variables here. See issue #40.
+  applyTemplateVariables(query: CompareQueriesQuery, scopedVars: ScopedVars): CompareQueriesQuery {
+    const next: CompareQueriesQuery = { ...query };
+
+    if (query.targetQueryJSON !== undefined) {
+      const interpolated = this._interpolateTargetQueryJSON(query.targetQueryJSON, scopedVars);
+      if (interpolated !== null) {
+        next.targetQueryJSON = interpolated;
+      }
+    }
+
+    return next;
+  }
+
+  interpolateVariablesInQueries(queries: CompareQueriesQuery[], scopedVars: ScopedVars): CompareQueriesQuery[] {
+    return queries.map((query) => this.applyTemplateVariables(query, scopedVars));
   }
 
   getValueFieldName(line: DataFrame) {
@@ -230,6 +250,42 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
       }
     }
     return null;
+  }
+
+  _interpolateTargetQueryJSON(
+    payload: Record<string, any> | string | undefined | null,
+    scopedVars: ScopedVars
+  ): Record<string, any> | null {
+    const normalized = this._normalizeTargetQueryJSON(payload);
+    if (normalized === null) {
+      return null;
+    }
+    const interpolated = this._deepReplaceTemplateVars(normalized, scopedVars);
+    return interpolated && typeof interpolated === 'object' ? (interpolated as Record<string, any>) : null;
+  }
+
+  _deepReplaceTemplateVars(value: unknown, scopedVars: ScopedVars): unknown {
+    if (typeof value === 'string') {
+      if (!value.includes('$')) {
+        return value;
+      }
+      return this.templateSrv.replace(value, scopedVars);
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this._deepReplaceTemplateVars(item, scopedVars));
+    }
+
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, nested]) => [
+          key,
+          this._deepReplaceTemplateVars(nested, scopedVars),
+        ])
+      );
+    }
+
+    return value;
   }
 
   async _runOneShift(

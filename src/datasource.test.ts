@@ -140,6 +140,33 @@ describe('DataSource', () => {
       expect(result.data[0].target).toBe('error_1d');
     });
 
+    it('applyTemplateVariables expands nested targetQueryJSON for backend queries', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) => value.replace(/\$moduleName/g, 'basic-product'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const result = ds.applyTemplateVariables(
+        {
+          refId: 'B',
+          query: '',
+          timeShifts: [{ id: 0, value: '1d' }],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          targetQueryJSON: { query: 'type:log AND moduleName: $moduleName' },
+        },
+        { moduleName: { value: 'basic-product', text: 'basic-product' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({ query: 'type:log AND moduleName: basic-product' });
+    });
+
     it('filters invalid non-empty shifts when at least one valid shift exists', async () => {
       const queryMock = jest.fn().mockResolvedValue({
         data: [{ target: 'error' }],
