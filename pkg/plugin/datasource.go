@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 var _ backend.QueryDataHandler = (*Datasource)(nil)
 var _ backend.CheckHealthHandler = (*Datasource)(nil)
 var _ instancemgmt.Instance = (*Datasource)(nil)
+
+var unresolvedUserVariablePattern = regexp.MustCompile(`\$\{?[A-Za-z][A-Za-z0-9_]*(?::[^}]*)?\}?`)
 
 type Datasource struct {
 	settings   DatasourceSettings
@@ -99,6 +102,15 @@ func (d *Datasource) handleQuery(ctx context.Context, client *GrafanaClient, q b
 				"Please configure the target datasource in the query editor.")
 	}
 
+	if variable := findUnresolvedUserVariable(qm.TargetQueryJSON); variable != "" {
+		return backend.ErrDataResponse(backend.StatusBadRequest,
+			fmt.Sprintf(
+				"unresolved dashboard variable %q in targetQueryJSON; "+
+					"open the query editor or replace the variable before alert evaluation",
+				variable,
+			))
+	}
+
 	if len(qm.TimeShifts) == 0 {
 		return backend.ErrDataResponse(backend.StatusBadRequest, "at least one time shift is required")
 	}
@@ -126,6 +138,17 @@ func (d *Datasource) handleQuery(ctx context.Context, client *GrafanaClient, q b
 	}
 
 	return backend.DataResponse{Frames: allFrames}
+}
+
+func findUnresolvedUserVariable(payload json.RawMessage) string {
+	for _, location := range unresolvedUserVariablePattern.FindAllIndex(payload, -1) {
+		// PostgreSQL dollar-quoted strings such as $tag$ are not Grafana variables.
+		if location[1] < len(payload) && payload[location[1]] == '$' {
+			continue
+		}
+		return string(payload[location[0]:location[1]])
+	}
+	return ""
 }
 
 func (d *Datasource) executeShiftedQuery(
@@ -257,8 +280,9 @@ func (d *Datasource) filterFrameByRange(frame *data.Frame, from, to time.Time) {
 	}
 }
 
-// applyAlias renames numeric field names/display names to include the time shift alias,
-// and injects a "timeshift" label so Grafana Alerting can distinguish series during union.
+// applyAlias renames numeric field names and sets DisplayNameFromDS to the final series name.
+// Keeping frame.Name unchanged avoids Grafana combining duplicate frame/field names and labels.
+// The "timeshift" label lets Grafana Alerting distinguish series during union.
 func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter string) {
 	for _, field := range frame.Fields {
 		if field.Type() == data.FieldTypeTime || field.Type() == data.FieldTypeNullableTime {
@@ -267,13 +291,18 @@ func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter s
 
 		field.Name = generalAlias(field.Name, alias, aliasType, delimiter)
 
-		if field.Config != nil {
-			if field.Config.DisplayName != "" {
-				field.Config.DisplayName = generalAlias(field.Config.DisplayName, alias, aliasType, delimiter)
-			}
-			if field.Config.DisplayNameFromDS != "" {
-				field.Config.DisplayNameFromDS = generalAlias(field.Config.DisplayNameFromDS, alias, aliasType, delimiter)
-			}
+		if field.Config == nil {
+			field.Config = &data.FieldConfig{}
+		}
+		if field.Config.DisplayName != "" {
+			field.Config.DisplayName = generalAlias(field.Config.DisplayName, alias, aliasType, delimiter)
+		}
+		if frame.Name != "" {
+			field.Config.DisplayNameFromDS = generalAlias(frame.Name, alias, aliasType, delimiter)
+		} else if field.Config.DisplayNameFromDS != "" {
+			field.Config.DisplayNameFromDS = generalAlias(field.Config.DisplayNameFromDS, alias, aliasType, delimiter)
+		} else {
+			field.Config.DisplayNameFromDS = field.Name
 		}
 
 		// Inject timeshift label so Grafana Alerting union can distinguish series from

@@ -84,6 +84,34 @@ Use CompareQueries with Grafana [Math expressions](https://grafana.com/docs/graf
 
 Step-by-step setup, SQL/MySQL wide-series notes, and troubleshooting: **[Wiki — Mathematical Expressions](https://github.com/leoswing/comparequeries-datasource-rc/wiki/Mathematical-Expressions)**.
 
+## Dashboard Variables & Ad Hoc Filters
+
+CompareQueries does **not** define datasource-specific multi-value formats (Lucene, PromQL, SQL `IN`, etc.). It delegates `targetQueryJSON` interpolation to the **target datasource's** native `applyTemplateVariables`, including Ad Hoc filters when Grafana passes them on the request.
+
+| Path | Behavior |
+|------|----------|
+| Panel query | Target ds formats variables and Ad Hoc filters |
+| Math expression | Same delegation before backend `QueryData` |
+| Alerting | Frontend expands variables; backend rejects unresolved `$var` in `targetQueryJSON` |
+
+**Multi-value variables** (e.g. `$moduleName` with `action`, `default`, `charge`) are formatted by the target plugin — Elasticsearch typically becomes `("action" OR "default" OR "charge")`, not CompareQueries' glob fallback `{a,b,c}`.
+
+**Ad Hoc filters (Filter and Group by)**
+
+1. Create an **Ad hoc filters** variable bound to the **CompareQueries** datasource (not the target ES/Prom/SQL datasource), so filters reach this plugin and are forwarded to the target query.
+2. Enable **Use static key dimensions** — CompareQueries does not expose field discovery APIs. Enter one field per line as `Display label,fieldName`, for example:
+
+   ```text
+   moduleName,moduleName
+   type,type
+   plugin,plugin
+   ```
+
+   The second column is the field name sent to the target datasource; the first is UI label only.
+3. In URLs, one filter per parameter: `var-filter=moduleName%7C%3D%7Caction` (`key|=|value`, URL-encoded). Do not combine multiple keys in one value (e.g. avoid `plugin,moduleName|=|action`).
+
+Verify in **Query inspector** on the final target request (e.g. `ds_type=elasticsearch`): the `query` string should include expanded variables and appended Ad Hoc clauses.
+
 ## Datasource Settings
 
 Configure the CompareQueries datasource in **Connections -> Data sources**.

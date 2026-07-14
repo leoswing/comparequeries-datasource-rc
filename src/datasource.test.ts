@@ -140,6 +140,112 @@ describe('DataSource', () => {
       expect(result.data[0].target).toBe('error_1d');
     });
 
+    it('delegates variable interpolation on the first frontend query', async () => {
+      const queryMock = jest.fn().mockResolvedValue({
+        data: [{ target: 'metric' }],
+      });
+      const applyTemplateVariables = jest.fn((query: Record<string, unknown>) => ({
+        ...query,
+        expr: 'up{job=~"(api|worker)"}',
+      }));
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn().mockResolvedValue({
+          meta: { id: 'prometheus' },
+          query: queryMock,
+          applyTemplateVariables,
+        }),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      await (ds as any)._runSelfContained(
+        {
+          requestId: 'req-first-run',
+          range: {
+            from: new Date(0),
+            to: new Date(1),
+            raw: {},
+          },
+          scopedVars: {
+            job: { value: ['api', 'worker'], text: 'api + worker' },
+          },
+        },
+        {
+          refId: 'A',
+          datasourceUid: 'prom-uid',
+          targetQueryJSON: { expr: 'up{job=~"$job"}' },
+          timeShifts: [{ id: 0, value: '' }],
+        }
+      );
+
+      expect(applyTemplateVariables).toHaveBeenCalledTimes(1);
+      expect(queryMock.mock.calls[0][0].targets[0].expr).toBe('up{job=~"(api|worker)"}');
+    });
+
+    it('does not delegate twice after expression preparation', async () => {
+      const queryMock = jest.fn().mockResolvedValue({
+        data: [{ target: 'metric' }],
+      });
+      const applyTemplateVariables = jest.fn((query: Record<string, unknown>) => ({
+        ...query,
+        expr: 'up{job=~"(api|worker)"}',
+      }));
+      const targetDs = {
+        meta: { id: 'prometheus' },
+        query: queryMock,
+        applyTemplateVariables,
+      };
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn().mockResolvedValue(targetDs),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      ds.registerTargetDatasource('prom-uid', targetDs);
+
+      const filters = [{ key: 'cluster', operator: '=', value: 'prod' }];
+      const [prepared] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [{ id: 0, value: '' }],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'prom-uid',
+          targetQueryJSON: { expr: 'up{job=~"$job"}' },
+        }],
+        { job: { value: ['api', 'worker'], text: 'api + worker' } },
+        filters
+      );
+
+      await (ds as any)._runSelfContained(
+        {
+          requestId: 'req-prepared',
+          range: {
+            from: new Date(0),
+            to: new Date(1),
+            raw: {},
+          },
+          scopedVars: {
+            job: { value: ['api', 'worker'], text: 'api + worker' },
+          },
+          filters,
+        },
+        prepared
+      );
+
+      expect(applyTemplateVariables).toHaveBeenCalledTimes(1);
+      expect(queryMock.mock.calls[0][0].targets[0].expr).toBe('up{job=~"(api|worker)"}');
+    });
+
     it('applyTemplateVariables expands nested targetQueryJSON for backend queries', () => {
       mockGetTemplateSrv.mockReturnValue({
         replace: (value: string) =>
@@ -189,9 +295,73 @@ describe('DataSource', () => {
       });
     });
 
-    it('interpolates a JSON-string target query payload', () => {
+    it('delegates interpolation to target datasource when cached', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      // Simulate a cached target datasource that formats lucene-style
+      const applyTemplateVariables = jest.fn(
+        (query: Record<string, unknown>, _scopedVars?: unknown, _filters?: unknown) => ({
+          ...query,
+          query: 'moduleName: ("action" OR "default" OR "charge")',
+        })
+      );
+      const fakeTargetDs = {
+        applyTemplateVariables,
+      };
+      ds.registerTargetDatasource('es-uid', fakeTargetDs);
+      const filters = [{ key: 'environment', operator: '=', value: 'production' }];
+
+      const result = ds._interpolateTargetQueryJSON(
+        '{"query":"moduleName: $moduleName"}',
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } },
+        { datasourceUid: 'es-uid', refId: 'B', filters }
+      );
+
+      expect(result).toEqual({
+        query: 'moduleName: ("action" OR "default" OR "charge")',
+      });
+      expect(applyTemplateVariables.mock.calls[0][2]).toBe(filters);
+    });
+
+    it('delegates interpolation to a datasource already loaded by Grafana on cold start', () => {
+      const applyTemplateVariables = jest.fn((query: Record<string, unknown>) => ({
+        ...query,
+        query: 'type:log AND moduleName: ("action" OR "default" OR "charge")',
+      }));
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn(),
+        datasources: {
+          'es-uid': {
+            applyTemplateVariables,
+          },
+        },
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      const result = ds._interpolateTargetQueryJSON(
+        '{"query":"type:log AND moduleName: $moduleName"}',
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } },
+        { datasourceUid: 'es-uid', refId: 'B' }
+      );
+
+      expect(result).toEqual({
+        query: 'type:log AND moduleName: ("action" OR "default" OR "charge")',
+      });
+      expect(applyTemplateVariables).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses Grafana default formatting when target datasource is unavailable', () => {
       mockGetTemplateSrv.mockReturnValue({
-        replace: (value: string) => value.replace(/\$moduleName/g, 'basic-product'),
+        replace: (value: string, _scopedVars?: unknown, format?: string) =>
+          value.replace(/\$moduleName/g, format === undefined ? '{action,default,charge}' : 'unexpected'),
       });
 
       const ds = new DataSource({
@@ -201,11 +371,88 @@ describe('DataSource', () => {
       } as any);
 
       const result = ds._interpolateTargetQueryJSON(
-        '{"query":"moduleName:$moduleName"}',
-        { moduleName: { value: 'basic-product', text: 'basic-product' } }
+        '{"query":"type:log AND moduleName: $moduleName"}',
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } },
+        { datasourceUid: 'unknown-uid', refId: 'B' }
       );
 
-      expect(result).toEqual({ query: 'moduleName:basic-product' });
+      expect(result).toEqual({
+        query: 'type:log AND moduleName: {action,default,charge}',
+      });
+    });
+
+    it('uses default fallback when expressions prepare queries without a delegate', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) => value.replace(/\$moduleName/g, '{action,default,charge}'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'B',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'target-uid',
+          targetQueryJSON: { query: 'moduleName: $moduleName' },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({ query: 'moduleName: {action,default,charge}' });
+    });
+
+    it('applyTemplateVariables expands timeShift value, alias, and delimiter', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) =>
+          value
+            .replace(/\$shiftAlias/g, 'last_week')
+            .replace(/\$delimiter/g, ' / ')
+            .replace(/\$shift/g, '7d'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const query = {
+        refId: 'B',
+        query: '',
+        timeShifts: [
+          { id: 0, value: '', alias: '' },
+          { id: 1, value: '$shift', alias: '$shiftAlias', aliasType: 'suffix', delimiter: '$delimiter' },
+        ],
+        aliasTypes: [],
+        units: [],
+        process: true,
+      };
+      const scopedVars = {
+        shift: { value: '7d', text: '7d' },
+        shiftAlias: { value: 'last_week', text: 'last_week' },
+        delimiter: { value: ' / ', text: ' / ' },
+      };
+      const result = ds.applyTemplateVariables(query as any, scopedVars);
+
+      expect(result.timeShifts).toEqual([
+        { id: 0, value: '', alias: '', delimiter: '' },
+        { id: 1, value: '7d', alias: 'last_week', aliasType: 'suffix', delimiter: ' / ' },
+      ]);
+      expect(query.timeShifts[1]).toEqual({
+        id: 1,
+        value: '$shift',
+        alias: '$shiftAlias',
+        aliasType: 'suffix',
+        delimiter: '$delimiter',
+      });
     });
 
     it('filters invalid non-empty shifts when at least one valid shift exists', async () => {
@@ -248,6 +495,31 @@ describe('DataSource', () => {
       expect(queryMock).toHaveBeenCalledTimes(1);
       expect(result.data).toHaveLength(1);
       expect(result.data[0].target).toBe('error_1d');
+    });
+  });
+
+  describe('time-shift alias naming', () => {
+    it('sets displayNameFromDS to final series name without baking frame.name into field.name', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const frame: any = {
+        name: 'test22',
+        fields: [
+          { name: 'Time', type: 'time', config: {} },
+          { name: 'Value', type: 'number', config: {} },
+        ],
+      };
+
+      (ds as any)._applyAliasToFrame(frame, '1d', 'suffix', '_');
+
+      expect(frame.name).toBe('test22');
+      expect(frame.fields[1].name).toBe('Value_1d');
+      expect(frame.fields[1].config.displayNameFromDS).toBe('test22_1d');
+      expect(frame.fields[1].labels).toEqual({ timeshift: '1d' });
     });
   });
 

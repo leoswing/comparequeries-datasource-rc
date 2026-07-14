@@ -9,3 +9,27 @@ datasources:
     version: 1
     editable: true
     jsonData: {}
+
+  - name: 'CompareQueries E2E'
+    uid: 'comparequeries-e2e'
+    type: 'leoswing-comparequeries-datasource'
+    access: proxy
+    isDefault: false
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      authMode: 'none'
+
+  - name: 'Elasticsearch E2E'
+    uid: 'elasticsearch-e2e'
+    type: 'elasticsearch'
+    access: proxy
+    url: 'http://127.0.0.1:1'
+    isDefault: false
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      index: 'comparequeries-e2e'
+      timeField: '@timestamp'

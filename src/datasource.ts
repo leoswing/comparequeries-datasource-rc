@@ -8,6 +8,7 @@ import {
   FieldType,
   Field,
   ScopedVars,
+  AdHocVariableFilter,
 } from '@grafana/data';
 import { getDataSourceSrv, DataSourceSrv, getTemplateSrv, TemplateSrv } from '@grafana/runtime';
 
@@ -17,12 +18,73 @@ import _ from 'lodash';
 import moment from 'moment';
 import { TIMESHIFT_FORMAT_REG } from './config';
 
+const RESERVED_TARGET_QUERY_FIELDS = new Set(['refId', 'datasource', 'key', 'hide']);
+const TARGET_QUERY_INTERPOLATION = Symbol('compareQueriesTargetInterpolation');
+
+type TargetInterpolationMode = 'delegated' | 'fallback';
+
+interface TemplateVariableDelegate {
+  applyTemplateVariables(
+    query: Record<string, unknown>,
+    scopedVars: ScopedVars,
+    filters?: AdHocVariableFilter[]
+  ): unknown;
+}
+
+interface TargetInterpolationOptions {
+  datasourceUid?: string;
+  refId?: string;
+  delegate?: unknown;
+  filters?: AdHocVariableFilter[];
+}
+
+interface TargetInterpolationResult {
+  query: Record<string, any>;
+  mode: TargetInterpolationMode;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function supportsTemplateVariableDelegation(value: unknown): value is TemplateVariableDelegate {
+  return isPlainObject(value) && typeof Reflect.get(value, 'applyTemplateVariables') === 'function';
+}
+
+function getLoadedTemplateVariableDelegate(
+  datasourceSrv: DataSourceSrv,
+  uid: string
+): TemplateVariableDelegate | undefined {
+  // ExpressionDatasource loads all source datasources before synchronously interpolating them.
+  // Grafana's public DataSourceSrv.get() is async, so use its already-loaded instance registry
+  // to bridge that synchronous API boundary. Fall back safely if Grafana changes the registry.
+  const loadedDatasources = Reflect.get(datasourceSrv, 'datasources');
+  if (!isPlainObject(loadedDatasources)) {
+    return undefined;
+  }
+
+  const datasource = loadedDatasources[uid];
+  return supportsTemplateVariableDelegation(datasource) ? datasource : undefined;
+}
+
+function getTargetInterpolationMode(value: unknown): TargetInterpolationMode | undefined {
+  if (!isPlainObject(value)) {
+    return undefined;
+  }
+  const mode = Reflect.get(value, TARGET_QUERY_INTERPOLATION);
+  return mode === 'delegated' || mode === 'fallback' ? mode : undefined;
+}
+
 export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQueriesOptions> {
   id: number;
   datasourceSrv: DataSourceSrv;
   templateSrv: TemplateSrv;
   meta: any;
   units = ['y', 'M', 'w', 'd', 'h', 'm', 's'];
+
+  // QueryEditor and query execution both resolve target datasource instances. Keep only the
+  // interpolation capability here so synchronous backend/expression preparation can delegate.
+  private _targetDsCache = new Map<string, TemplateVariableDelegate>();
 
   constructor(instanceSettings: DataSourceInstanceSettings<CompareQueriesOptions>) {
     super(instanceSettings);
@@ -33,23 +95,69 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     this.templateSrv = getTemplateSrv();
   }
 
-  // Grafana calls this before backend QueryData (expressions / alerting). Nested targetQueryJSON
-  // is not auto-interpolated — we must expand dashboard variables here. See issue #40.
-  applyTemplateVariables(query: CompareQueriesQuery, scopedVars: ScopedVars): CompareQueriesQuery {
+  registerTargetDatasource(uid: string, datasource: unknown): void {
+    if (supportsTemplateVariableDelegation(datasource)) {
+      this._targetDsCache.set(uid, datasource);
+    }
+  }
+
+  // Grafana calls this before backend QueryData (expressions / alerting). Delegate target query
+  // interpolation when the native datasource instance is available; otherwise use Grafana's
+  // default glob formatting without maintaining datasource-specific rules in this plugin.
+  applyTemplateVariables(
+    query: CompareQueriesQuery,
+    scopedVars: ScopedVars,
+    filters?: AdHocVariableFilter[]
+  ): CompareQueriesQuery {
+    return this._applyTemplateVariables(query, scopedVars, filters);
+  }
+
+  interpolateVariablesInQueries(
+    queries: CompareQueriesQuery[],
+    scopedVars: ScopedVars,
+    filters?: AdHocVariableFilter[]
+  ): CompareQueriesQuery[] {
+    // Grafana expressions call this method before forwarding queries to backend QueryData.
+    // Therefore an unavailable delegate must still use the default glob fallback.
+    return queries.map((query) => this._applyTemplateVariables(query, scopedVars, filters));
+  }
+
+  private _applyTemplateVariables(
+    query: CompareQueriesQuery,
+    scopedVars: ScopedVars,
+    filters?: AdHocVariableFilter[]
+  ): CompareQueriesQuery {
     const next: CompareQueriesQuery = { ...query };
 
     if (query.targetQueryJSON !== undefined) {
-      const interpolated = this._interpolateTargetQueryJSON(query.targetQueryJSON, scopedVars);
-      if (interpolated !== null) {
-        next.targetQueryJSON = interpolated;
+      const interpolation = this._prepareTargetQueryJSON(
+        query.targetQueryJSON,
+        scopedVars,
+        {
+          datasourceUid: query.datasourceUid,
+          refId: query.refId,
+          filters,
+        }
+      );
+      if (interpolation !== null) {
+        next.targetQueryJSON = interpolation.query;
+        Object.defineProperty(next, TARGET_QUERY_INTERPOLATION, {
+          value: interpolation.mode,
+          enumerable: true,
+        });
       }
     }
 
-    return next;
-  }
+    if (Array.isArray(query.timeShifts)) {
+      next.timeShifts = query.timeShifts.map((ts) => ({
+        ...ts,
+        value: this.templateSrv.replace(ts?.value ?? '', scopedVars),
+        alias: this.templateSrv.replace(ts?.alias ?? '', scopedVars),
+        delimiter: this.templateSrv.replace(ts?.delimiter ?? '', scopedVars),
+      }));
+    }
 
-  interpolateVariablesInQueries(queries: CompareQueriesQuery[], scopedVars: ScopedVars): CompareQueriesQuery[] {
-    return queries.map((query) => this.applyTemplateVariables(query, scopedVars));
+    return next;
   }
 
   getValueFieldName(line: DataFrame) {
@@ -198,7 +306,21 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
       return { data: [] };
     }
 
-    const baseQuery = this._normalizeTargetQueryJSON(target.targetQueryJSON);
+    this.registerTargetDatasource(target.datasourceUid, ds);
+
+    const previousInterpolation = getTargetInterpolationMode(target);
+    const baseQuery = previousInterpolation === 'delegated'
+      ? this._normalizeTargetQueryJSON(target.targetQueryJSON)
+      : this._prepareTargetQueryJSON(
+          target.targetQueryJSON,
+          options.scopedVars,
+          {
+            datasourceUid: target.datasourceUid,
+            refId: target.refId,
+            delegate: ds,
+            filters: options.filters,
+          }
+        )?.query ?? null;
     if (baseQuery === null) {
       console.warn('CompareQueries: targetQueryJSON is not valid JSON', target.targetQueryJSON);
       return { data: [] };
@@ -252,16 +374,73 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     return null;
   }
 
+  _stripReservedTargetQueryFields(payload: Record<string, unknown>): Record<string, any> {
+    const out: Record<string, any> = {};
+    for (const key of Object.keys(payload)) {
+      if (!RESERVED_TARGET_QUERY_FIELDS.has(key)) {
+        out[key] = payload[key];
+      }
+    }
+    return out;
+  }
+
+  // Interpolate targetQueryJSON by delegating to the target datasource when possible.
+  // If no delegate exists, fallback uses TemplateSrv without a format so Grafana applies glob.
   _interpolateTargetQueryJSON(
     payload: Record<string, any> | string | undefined | null,
-    scopedVars: ScopedVars
+    scopedVars: ScopedVars,
+    options: TargetInterpolationOptions = {}
   ): Record<string, any> | null {
+    return this._prepareTargetQueryJSON(payload, scopedVars, options)?.query ?? null;
+  }
+
+  private _prepareTargetQueryJSON(
+    payload: Record<string, any> | string | undefined | null,
+    scopedVars: ScopedVars,
+    options: TargetInterpolationOptions
+  ): TargetInterpolationResult | null {
     const normalized = this._normalizeTargetQueryJSON(payload);
     if (normalized === null) {
       return null;
     }
+
+    const delegate = supportsTemplateVariableDelegation(options.delegate)
+      ? options.delegate
+      : options.datasourceUid
+        ? this._targetDsCache.get(options.datasourceUid) ??
+          getLoadedTemplateVariableDelegate(this.datasourceSrv, options.datasourceUid)
+        : undefined;
+
+    if (delegate && options.datasourceUid) {
+      this._targetDsCache.set(options.datasourceUid, delegate);
+    }
+
+    if (delegate) {
+      try {
+        const fullQuery = {
+          ...normalized,
+          refId: options.refId || 'A',
+          datasource: options.datasourceUid ? { uid: options.datasourceUid } : undefined,
+        };
+        const result = delegate.applyTemplateVariables(fullQuery, scopedVars, options.filters);
+        if (isPlainObject(result)) {
+          return {
+            query: this._stripReservedTargetQueryFields(result),
+            mode: 'delegated',
+          };
+        }
+      } catch (err) {
+        console.warn('CompareQueries: target applyTemplateVariables failed, using fallback', err);
+      }
+    }
+
     const interpolated = this._deepReplaceTemplateVars(normalized, scopedVars);
-    return interpolated && typeof interpolated === 'object' ? (interpolated as Record<string, any>) : null;
+    return isPlainObject(interpolated)
+      ? {
+          query: this._stripReservedTargetQueryFields(interpolated),
+          mode: 'fallback',
+        }
+      : null;
   }
 
   _deepReplaceTemplateVars(value: unknown, scopedVars: ScopedVars): unknown {
@@ -350,7 +529,7 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     if (isShifted) {
       const alias = this.templateSrv.replace(ts.alias, options.scopedVars) || shiftValue;
       const aliasType = ts.aliasType || 'suffix';
-      const delimiter = ts.delimiter || '_';
+      const delimiter = this.templateSrv.replace(ts.delimiter ?? '', options.scopedVars) || '_';
       const shiftMs = target.process ? this.parseShiftToMs(shiftValue) : undefined;
 
       result.data.forEach((line: any) => {
@@ -515,24 +694,47 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
       if (typeof line.title !== 'undefined' && line.title !== null) {
         line.title = this.generalAlias(line.title, alias, aliasType, delimiter);
       }
-    } else if (line.fields) {
-      // New data frame format
+      return;
+    }
+
+    if (line.fields) {
+      // Match backend applyAlias: keep frame.name, rename numeric field.name from the raw
+      // field name (Value → Value_1d), and set displayNameFromDS to the final legend name.
+      // Using getFieldDisplayName() as the rename input would bake frame.name into field.name
+      // (test22_1d) and then Grafana Mixed panels concatenate again → "test22 test22_1d".
       line.fields.forEach((field: Record<string, any>) => {
-        if (field.name) {
-          const valueFieldName = this.getValueFieldName(line);
-          const inputName = field.type === FieldType.number && valueFieldName ? valueFieldName : field.name;
-          if (field.type === FieldType.number) {
-            field.name = this.generalAlias(inputName, alias, aliasType, delimiter);
-          }
+        if (field.type === FieldType.time) {
+          return;
         }
-        if (field.config && field.config.displayName) {
+
+        if (field.name) {
+          field.name = this.generalAlias(field.name, alias, aliasType, delimiter);
+        }
+
+        field.config = field.config || {};
+        if (field.config.displayName) {
           field.config.displayName = this.generalAlias(field.config.displayName, alias, aliasType, delimiter);
         }
-        if (field.config && field.config.displayNameFromDS) {
-          field.config.displayNameFromDS = this.generalAlias(field.config.displayNameFromDS, alias, aliasType, delimiter);
+
+        if (line.name) {
+          field.config.displayNameFromDS = this.generalAlias(line.name, alias, aliasType, delimiter);
+        } else if (field.config.displayNameFromDS) {
+          field.config.displayNameFromDS = this.generalAlias(
+            field.config.displayNameFromDS,
+            alias,
+            aliasType,
+            delimiter
+          );
+        } else if (field.name) {
+          field.config.displayNameFromDS = field.name;
         }
+
+        field.labels = { ...(field.labels || {}), timeshift: alias };
       });
-    } else if (line.columns) {
+      return;
+    }
+
+    if (line.columns) {
       // Table format — skip first column for joins
       for (let i = 1; i < line.columns.length; i++) {
         const column = line.columns[i];
@@ -609,7 +811,7 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
             let timeShiftValue: any;
             let timeShiftAlias: any;
             let aliasType = timeShift.aliasType || 'suffix';
-            let delimiter = timeShift.delimiter || '_';
+            let delimiter = '_';
 
             let comparePromise = _this.datasourceSrv
               .get(compareDsName)
@@ -617,9 +819,9 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
                 if (compareDs.meta.id === _this.meta.id) {
                   return { data: [] };
                 }
-
                 timeShiftValue = _this.templateSrv.replace(timeShift.value, options.scopedVars);
                 timeShiftAlias = _this.templateSrv.replace(timeShift.alias, options.scopedVars) || timeShiftValue;
+                delimiter = _this.templateSrv.replace(timeShift.delimiter ?? '', options.scopedVars) || '_';
 
                 if (timeShiftValue === null || timeShiftValue === '' || typeof timeShiftValue === 'undefined' || !TIMESHIFT_FORMAT_REG.test(timeShiftValue)) {
                   return { data: [] };
