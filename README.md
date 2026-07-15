@@ -92,7 +92,7 @@ CompareQueries does **not** define datasource-specific multi-value formats (Luce
 |------|----------|
 | Panel query | Target ds formats variables and Ad Hoc filters |
 | Math expression | Same delegation before backend `QueryData` |
-| Alerting | Frontend expands variables; backend rejects unresolved `$var` in `targetQueryJSON` |
+| Alerting | Frontend expands variables when possible; backend forwards the target query without interpreting datasource-specific macros |
 
 **Multi-value variables** (e.g. `$moduleName` with `action`, `default`, `charge`) are formatted by the target plugin — Elasticsearch typically becomes `("action" OR "default" OR "charge")`, not CompareQueries' glob fallback `{a,b,c}`.
 

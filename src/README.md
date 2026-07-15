@@ -77,7 +77,7 @@ For Grafana 13+, use Step 4 recommended flow instead: select `Target Datasource`
 Alerting uses backend execution. Alert rules do not use the panel `-- Mixed --` datasource flow.
 Configure CompareQueries directly with `Target Datasource`, `Time shift`, and query inline.
 
-- Dashboard variables in `targetQueryJSON` must be expanded before evaluation; the backend rejects unresolved `$variable` placeholders.
+- The backend treats `targetQueryJSON` as an opaque target-datasource payload. Any remaining variables or datasource-specific macros are forwarded for the target datasource to validate.
 - Default datasource auth mode is `No Authentication`.
 - If backend or alerting requests fail authentication, switch to `Basic authentication`.
 - In `Basic authentication`, configure `Service Account` token and (optionally) `Grafana URL`.

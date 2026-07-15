@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -19,8 +18,6 @@ import (
 var _ backend.QueryDataHandler = (*Datasource)(nil)
 var _ backend.CheckHealthHandler = (*Datasource)(nil)
 var _ instancemgmt.Instance = (*Datasource)(nil)
-
-var unresolvedUserVariablePattern = regexp.MustCompile(`\$\{?[A-Za-z][A-Za-z0-9_]*(?::[^}]*)?\}?`)
 
 type Datasource struct {
 	settings   DatasourceSettings
@@ -102,19 +99,13 @@ func (d *Datasource) handleQuery(ctx context.Context, client *GrafanaClient, q b
 				"Please configure the target datasource in the query editor.")
 	}
 
-	if variable := findUnresolvedUserVariable(qm.TargetQueryJSON); variable != "" {
-		return backend.ErrDataResponse(backend.StatusBadRequest,
-			fmt.Sprintf(
-				"unresolved dashboard variable %q in targetQueryJSON; "+
-					"open the query editor or replace the variable before alert evaluation",
-				variable,
-			))
-	}
-
 	if len(qm.TimeShifts) == 0 {
 		return backend.ErrDataResponse(backend.StatusBadRequest, "at least one time shift is required")
 	}
 
+	// Treat targetQueryJSON as an opaque target-datasource payload. CompareQueries cannot
+	// distinguish unresolved dashboard variables from datasource-specific macros, so the
+	// target datasource remains responsible for interpolation and validation.
 	var allFrames data.Frames
 
 	for _, ts := range qm.TimeShifts {
@@ -138,17 +129,6 @@ func (d *Datasource) handleQuery(ctx context.Context, client *GrafanaClient, q b
 	}
 
 	return backend.DataResponse{Frames: allFrames}
-}
-
-func findUnresolvedUserVariable(payload json.RawMessage) string {
-	for _, location := range unresolvedUserVariablePattern.FindAllIndex(payload, -1) {
-		// PostgreSQL dollar-quoted strings such as $tag$ are not Grafana variables.
-		if location[1] < len(payload) && payload[location[1]] == '$' {
-			continue
-		}
-		return string(payload[location[0]:location[1]])
-	}
-	return ""
 }
 
 func (d *Datasource) executeShiftedQuery(

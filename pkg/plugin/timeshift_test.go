@@ -52,45 +52,6 @@ func TestParseTimeShiftValues(t *testing.T) {
 	}
 }
 
-func TestFindUnresolvedUserVariable(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		want    string
-	}{
-		{
-			name:    "plain variable",
-			payload: `{"query":"moduleName: $moduleName"}`,
-			want:    "$moduleName",
-		},
-		{
-			name:    "formatted variable",
-			payload: `{"query":"moduleName: ${moduleName:lucene}"}`,
-			want:    "${moduleName:lucene}",
-		},
-		{
-			name:    "built-in macro is allowed",
-			payload: `{"expr":"rate(metric[$__interval])"}`,
-		},
-		{
-			name:    "postgres dollar quote is allowed",
-			payload: `{"rawSql":"SELECT $tag$value$tag$"}`,
-		},
-		{
-			name:    "expanded query",
-			payload: `{"query":"moduleName: (\"action\" OR \"charge\")"}`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := findUnresolvedUserVariable([]byte(tt.payload)); got != tt.want {
-				t.Fatalf("findUnresolvedUserVariable() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestShiftTimeRange(t *testing.T) {
 	now := time.Now()
 	from := now.Add(-time.Hour)
