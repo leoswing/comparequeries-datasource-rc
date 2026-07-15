@@ -33,6 +33,6 @@ test('expression requests expand multi-value variables before backend QueryData'
   );
   const targetQuery = compareQuery?.targetQueryJSON?.query;
 
-  expect(targetQuery).toBe('type:log AND moduleName: {action,default,charge}');
+  expect(targetQuery).toBe('type:log AND moduleName: ("action" OR "default" OR "charge")');
   expect(targetQuery).not.toContain('$moduleName');
 });

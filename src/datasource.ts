@@ -759,15 +759,14 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     }
 
     if (line.fields) {
-      // Match backend applyAlias: keep frame.name, rename numeric field.name from the raw
-      // field name (Value → Value_1d), and set displayNameFromDS to the final legend name.
-      // Using getFieldDisplayName() as the rename input would bake frame.name into field.name
-      // (test22_1d) and then Grafana Mixed panels concatenate again → "test22 test22_1d".
+      // Keep frame.name separate from field.name, and use Grafana's display-name resolver
+      // to produce one final alias without appending frame/field/label parts again.
       line.fields.forEach((field: Record<string, any>) => {
         if (field.type === FieldType.time) {
           return;
         }
 
+        const datasourceDisplayName = getFieldDisplayName(field as Field, line);
         if (field.name) {
           field.name = this.generalAlias(field.name, alias, aliasType, delimiter);
         }
@@ -777,17 +776,20 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
           field.config.displayName = this.generalAlias(field.config.displayName, alias, aliasType, delimiter);
         }
 
-        if (line.name) {
-          field.config.displayNameFromDS = this.generalAlias(line.name, alias, aliasType, delimiter);
-        } else if (field.config.displayNameFromDS) {
+        if (field.config.displayNameFromDS) {
           field.config.displayNameFromDS = this.generalAlias(
             field.config.displayNameFromDS,
             alias,
             aliasType,
             delimiter
           );
-        } else if (field.name) {
-          field.config.displayNameFromDS = field.name;
+        } else if (datasourceDisplayName) {
+          field.config.displayNameFromDS = this.generalAlias(
+            datasourceDisplayName,
+            alias,
+            aliasType,
+            delimiter
+          );
         }
 
         field.labels = { ...(field.labels || {}), timeshift: alias };

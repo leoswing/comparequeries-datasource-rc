@@ -8,8 +8,8 @@
   "panels": [
     {
       "datasource": {
-        "type": "leoswing-comparequeries-datasource",
-        "uid": "comparequeries-e2e"
+        "type": "datasource",
+        "uid": "-- Mixed --"
       },
       "fieldConfig": {
         "defaults": {},
@@ -35,6 +35,31 @@
       },
       "targets": [
         {
+          "bucketAggs": [
+            {
+              "field": "@timestamp",
+              "id": "2",
+              "settings": {
+                "interval": "1m"
+              },
+              "type": "date_histogram"
+            }
+          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "elasticsearch-e2e"
+          },
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "query": "type:log AND moduleName: $moduleName",
+          "refId": "A",
+          "timeField": "@timestamp"
+        },
+        {
           "aliasTypes": [
             "suffix",
             "prefix",
@@ -46,7 +71,7 @@
           },
           "datasourceUid": "elasticsearch-e2e",
           "process": true,
-          "refId": "A",
+          "refId": "B",
           "targetQueryJSON": {
             "bucketAggs": [
               {
@@ -89,8 +114,8 @@
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "$A",
-          "refId": "B",
+          "expression": "$B",
+          "refId": "C",
           "type": "math"
         }
       ],

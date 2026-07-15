@@ -582,7 +582,7 @@ describe('DataSource', () => {
   });
 
   describe('time-shift alias naming', () => {
-    it('sets displayNameFromDS to final series name without baking frame.name into field.name', () => {
+    it('keeps frame name separate from the aliased field name', () => {
       const ds = new DataSource({
         id: 1,
         meta: { id: 'leoswing-comparequeries-datasource' },
@@ -603,6 +603,52 @@ describe('DataSource', () => {
       expect(frame.fields[1].name).toBe('Value_1d');
       expect(frame.fields[1].config.displayNameFromDS).toBe('test22_1d');
       expect(frame.fields[1].labels).toEqual({ timeshift: '1d' });
+    });
+
+    it('keeps wide-frame field display names distinct', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      const frame: any = {
+        name: 'orders',
+        fields: [
+          { name: 'Time', type: 'time', config: {} },
+          { name: 'success', type: 'number', config: {} },
+          { name: 'failure', type: 'number', config: {} },
+        ],
+      };
+
+      (ds as any)._applyAliasToFrame(frame, '1d', 'suffix', '_');
+
+      expect(frame.fields[1].name).toBe('success_1d');
+      expect(frame.fields[2].name).toBe('failure_1d');
+      expect(frame.fields[1].config.displayNameFromDS).toBe('success_1d');
+      expect(frame.fields[2].config.displayNameFromDS).toBe('failure_1d');
+    });
+
+    it('keeps mixed-frame field display names distinct', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      const frame: any = {
+        name: 'orders',
+        fields: [
+          { name: 'Time', type: 'time', config: {} },
+          { name: 'status', type: 'string', config: {} },
+          { name: 'count', type: 'number', config: {} },
+        ],
+      };
+
+      (ds as any)._applyAliasToFrame(frame, '1d', 'suffix', '_');
+
+      expect(frame.fields[1].name).toBe('status_1d');
+      expect(frame.fields[1].config.displayNameFromDS).toBe('status_1d');
+      expect(frame.fields[2].name).toBe('count_1d');
+      expect(frame.fields[2].config.displayNameFromDS).toBe('count_1d');
     });
   });
 

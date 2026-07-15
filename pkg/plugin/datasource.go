@@ -260,10 +260,12 @@ func (d *Datasource) filterFrameByRange(frame *data.Frame, from, to time.Time) {
 	}
 }
 
-// applyAlias renames numeric field names and sets DisplayNameFromDS to the final series name.
-// Keeping frame.Name unchanged avoids Grafana combining duplicate frame/field names and labels.
+// applyAlias aliases field-level names while keeping frame.Name unchanged.
+// DisplayNameFromDS prevents Grafana from appending frame and timeshift labels again.
 // The "timeshift" label lets Grafana Alerting distinguish series during union.
 func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter string) {
+	singleField := singleSeriesField(frame)
+
 	for _, field := range frame.Fields {
 		if field.Type() == data.FieldTypeTime || field.Type() == data.FieldTypeNullableTime {
 			continue
@@ -277,10 +279,10 @@ func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter s
 		if field.Config.DisplayName != "" {
 			field.Config.DisplayName = generalAlias(field.Config.DisplayName, alias, aliasType, delimiter)
 		}
-		if frame.Name != "" {
-			field.Config.DisplayNameFromDS = generalAlias(frame.Name, alias, aliasType, delimiter)
-		} else if field.Config.DisplayNameFromDS != "" {
+		if field.Config.DisplayNameFromDS != "" {
 			field.Config.DisplayNameFromDS = generalAlias(field.Config.DisplayNameFromDS, alias, aliasType, delimiter)
+		} else if field == singleField && frame.Name != "" {
+			field.Config.DisplayNameFromDS = generalAlias(frame.Name, alias, aliasType, delimiter)
 		} else {
 			field.Config.DisplayNameFromDS = field.Name
 		}
@@ -292,6 +294,20 @@ func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter s
 		}
 		field.Labels["timeshift"] = alias
 	}
+}
+
+func singleSeriesField(frame *data.Frame) *data.Field {
+	var result *data.Field
+	for _, field := range frame.Fields {
+		if field.Type() == data.FieldTypeTime || field.Type() == data.FieldTypeNullableTime {
+			continue
+		}
+		if result != nil {
+			return nil
+		}
+		result = field
+	}
+	return result
 }
 
 func generalAlias(original, alias, aliasType, delimiter string) string {
