@@ -593,4 +593,19 @@ describe('DataSource', () => {
       expect(compareQueryMock).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('ad hoc variable support', () => {
+    it('exposes getTagKeys/getTagValues so Grafana can bind Ad hoc variables', async () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      expect(typeof ds.getTagKeys).toBe('function');
+      expect(typeof ds.getTagValues).toBe('function');
+      await expect(ds.getTagKeys()).resolves.toEqual([]);
+      await expect(ds.getTagValues({ key: 'moduleName' } as any)).resolves.toEqual([]);
+    });
+  });
 });

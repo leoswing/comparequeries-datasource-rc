@@ -98,8 +98,8 @@ CompareQueries does **not** define datasource-specific multi-value formats (Luce
 
 **Ad Hoc filters (Filter and Group by)**
 
-1. Create an **Ad hoc filters** variable bound to the **CompareQueries** datasource (not the target ES/Prom/SQL datasource), so filters reach this plugin and are forwarded to the target query.
-2. Enable **Use static key dimensions** — CompareQueries does not expose field discovery APIs. Enter one field per line as `Display label,fieldName`, for example:
+1. Create an **Ad hoc filters** variable and select **CompareQueries** as its datasource.
+2. Enable **Use static key dimensions**, then enter the fields users can filter by. Use one field per line in `Display label,fieldName` format:
 
    ```text
    moduleName,moduleName
@@ -107,10 +107,11 @@ CompareQueries does **not** define datasource-specific multi-value formats (Luce
    plugin,plugin
    ```
 
-   The second column is the field name sent to the target datasource; the first is UI label only.
-3. In URLs, one filter per parameter: `var-filter=moduleName%7C%3D%7Caction` (`key|=|value`, URL-encoded). Do not combine multiple keys in one value (e.g. avoid `plugin,moduleName|=|action`).
+   The first column is the label shown in Grafana; the second is the actual field name.
+3. To type filter values in the Grafana UI, enable **Allow custom values**.
+4. To set filters from a dashboard URL, add one `var-filter` parameter per filter. Example: `var-filter=moduleName%7C%3D%7Caction` represents `moduleName = action`. URL filters do not require **Allow custom values**.
 
-Verify in **Query inspector** on the final target request (e.g. `ds_type=elasticsearch`): the `query` string should include expanded variables and appended Ad Hoc clauses.
+CompareQueries does not provide automatic field or value suggestions, so configure static fields and enter values manually. To confirm a filter is active, open **Query inspector** and check that the final target query includes the selected condition.
 
 ## Datasource Settings
 

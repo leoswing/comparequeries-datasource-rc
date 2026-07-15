@@ -9,6 +9,9 @@ import {
   Field,
   ScopedVars,
   AdHocVariableFilter,
+  DataSourceGetTagKeysOptions,
+  DataSourceGetTagValuesOptions,
+  MetricFindValue,
 } from '@grafana/data';
 import { getDataSourceSrv, DataSourceSrv, getTemplateSrv, TemplateSrv } from '@grafana/runtime';
 
@@ -955,6 +958,17 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
 
       return shiftTime;
     }
+  }
+
+  // Grafana checks ds.getTagKeys to decide whether a datasource can back Ad hoc variables.
+  // CompareQueries does not discover fields itself; use static key dimensions on the variable
+  // and forward filters to the target datasource during query execution.
+  async getTagKeys(_options?: DataSourceGetTagKeysOptions): Promise<MetricFindValue[]> {
+    return [];
+  }
+
+  async getTagValues(_options: DataSourceGetTagValuesOptions): Promise<MetricFindValue[]> {
+    return [];
   }
 
   async testDatasource() {

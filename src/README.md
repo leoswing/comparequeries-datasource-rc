@@ -50,8 +50,9 @@ CompareQueries delegates variable and Ad Hoc filter formatting to the **target d
 
 - **Panel / Math expression / Alerting**: `targetQueryJSON` is interpolated via the target plugin's `applyTemplateVariables` when available.
 - **Multi-value variables**: formatted by the target (e.g. Elasticsearch → `("a" OR "b" OR "c")`), not CompareQueries' glob fallback `{a,b,c}`.
-- **Ad Hoc filters**: bind the Ad hoc variable to **CompareQueries** (not the target datasource). Enable **Use static key dimensions** and list fields one per line as `label,fieldName` (e.g. `moduleName,moduleName`). URL: `var-filter=moduleName%7C%3D%7Caction` — one key per parameter.
-- **Verify**: Query inspector → final target request (`ds_type=elasticsearch`, etc.) should show expanded variables and appended filters.
+- **Ad Hoc filters**: select **CompareQueries** as the variable datasource, enable **Use static key dimensions**, and enter fields as `label,fieldName` (for example, `moduleName,moduleName`). Enable **Allow custom values** only when users need to type values in the Grafana UI.
+- **URL filters**: pass one `var-filter` parameter per filter, for example `var-filter=moduleName%7C%3D%7Caction`. URL filters do not require **Allow custom values**.
+- **Verify**: open Query inspector and check that the final target query includes the selected filters.
 
 # Mathematical expressions (2.1.0+)
 
