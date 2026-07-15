@@ -1,3 +1,5 @@
+import type { AdHocVariableFilter } from '@grafana/data';
+
 import { DataSource } from './datasource';
 
 const mockGetDataSourceSrv = jest.fn();
@@ -293,6 +295,87 @@ describe('DataSource', () => {
           values: ['$moduleName', 1, true],
         },
       });
+    });
+
+    it('bridges legacy Ad Hoc filters without mutating the target datasource', () => {
+      const legacyFilters = [{ key: 'moduleName', operator: '=', value: 'basic-product' }];
+      const getAdhocFilters = jest.fn().mockReturnValue(legacyFilters);
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) => value,
+        getAdhocFilters,
+      });
+      const targetGetAdhocFilters = jest.fn().mockReturnValue([]);
+      const targetTemplateSrv = {
+        getAdhocFilters: targetGetAdhocFilters,
+      };
+      const legacyTargetDs = {
+        name: 'Elasticsearch',
+        templateSrv: targetTemplateSrv,
+        applyTemplateVariables(query: Record<string, unknown>, _scopedVars: unknown) {
+          const filters = this.templateSrv.getAdhocFilters(this.name);
+          const filterQuery = filters.map((filter: AdHocVariableFilter) => `${filter.key}:\"${filter.value}\"`).join(' AND ');
+          return {
+            ...query,
+            query: [query.query, filterQuery].filter(Boolean).join(' AND '),
+          };
+        },
+      };
+      const ds = new DataSource({
+        id: 1,
+        uid: 'comparequeries-uid',
+        name: 'CompareQueries',
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      ds.registerTargetDatasource('es-uid', legacyTargetDs);
+
+      const result = ds.applyTemplateVariables(
+        {
+          refId: 'B',
+          datasourceUid: 'es-uid',
+          targetQueryJSON: { query: 'type: log' },
+        } as any,
+        {}
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'type: log AND moduleName:"basic-product"',
+      });
+      expect(getAdhocFilters).toHaveBeenCalledWith('CompareQueries');
+      expect(targetGetAdhocFilters).not.toHaveBeenCalled();
+      expect(legacyTargetDs.templateSrv).toBe(targetTemplateSrv);
+    });
+
+    it('keeps an explicitly empty modern filter list authoritative', () => {
+      const getAdhocFilters = jest.fn().mockReturnValue([
+        { key: 'moduleName', operator: '=', value: 'stale-value' },
+      ]);
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) => value,
+        getAdhocFilters,
+      });
+      const applyTemplateVariables = jest.fn(
+        (query: Record<string, unknown>, _scopedVars?: unknown, _filters?: unknown) => query
+      );
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      ds.registerTargetDatasource('es-uid', { applyTemplateVariables });
+
+      ds.applyTemplateVariables(
+        {
+          refId: 'B',
+          datasourceUid: 'es-uid',
+          targetQueryJSON: { query: 'type: log' },
+        } as any,
+        {},
+        []
+      );
+
+      expect(getAdhocFilters).not.toHaveBeenCalled();
+      expect(applyTemplateVariables.mock.calls[0][2]).toEqual([]);
     });
 
     it('delegates interpolation to target datasource when cached', () => {

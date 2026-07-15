@@ -54,6 +54,33 @@ function supportsTemplateVariableDelegation(value: unknown): value is TemplateVa
   return isPlainObject(value) && typeof Reflect.get(value, 'applyTemplateVariables') === 'function';
 }
 
+function applyTemplateVariablesWithLegacyFilters(
+  delegate: TemplateVariableDelegate,
+  query: Record<string, unknown>,
+  scopedVars: ScopedVars,
+  filters: AdHocVariableFilter[]
+): unknown {
+  const applyTemplateVariables = delegate.applyTemplateVariables;
+  const templateSrv = Reflect.get(delegate as object, 'templateSrv');
+  if (!isPlainObject(templateSrv) || typeof Reflect.get(templateSrv, 'getAdhocFilters') !== 'function') {
+    return applyTemplateVariables.call(delegate, query, scopedVars, filters);
+  }
+
+  // Scope the compatibility override to this invocation. Mutating the shared datasource or
+  // TemplateSrv would leak CompareQueries filters into concurrent queries and other panels.
+  const compatibleTemplateSrv = Object.create(templateSrv);
+  Object.defineProperty(compatibleTemplateSrv, 'getAdhocFilters', {
+    value: () => filters,
+  });
+
+  const compatibleDelegate = Object.create(delegate) as TemplateVariableDelegate;
+  Object.defineProperty(compatibleDelegate, 'templateSrv', {
+    value: compatibleTemplateSrv,
+  });
+
+  return applyTemplateVariables.call(compatibleDelegate, query, scopedVars, filters);
+}
+
 function getLoadedTemplateVariableDelegate(
   datasourceSrv: DataSourceSrv,
   uid: string
@@ -161,6 +188,37 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
     }
 
     return next;
+  }
+
+  private _getLegacyAdHocFilters(): AdHocVariableFilter[] {
+    const legacyGetAdhocFilters = Reflect.get(this.templateSrv as object, 'getAdhocFilters');
+    if (typeof legacyGetAdhocFilters !== 'function') {
+      return [];
+    }
+
+    try {
+      const resolved = legacyGetAdhocFilters.call(this.templateSrv, this.name);
+      return Array.isArray(resolved) ? resolved : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private _applyTargetTemplateVariables(
+    delegate: TemplateVariableDelegate,
+    query: Record<string, unknown>,
+    scopedVars: ScopedVars,
+    filters?: AdHocVariableFilter[]
+  ): unknown {
+    // A defined value, including [], is authoritative under Grafana's modern request contract.
+    if (filters !== undefined) {
+      return delegate.applyTemplateVariables(query, scopedVars, filters);
+    }
+
+    const legacyFilters = this._getLegacyAdHocFilters();
+    return legacyFilters.length > 0
+      ? applyTemplateVariablesWithLegacyFilters(delegate, query, scopedVars, legacyFilters)
+      : delegate.applyTemplateVariables(query, scopedVars);
   }
 
   getValueFieldName(line: DataFrame) {
@@ -425,7 +483,7 @@ export class DataSource extends DataSourceApi<CompareQueriesQuery, CompareQuerie
           refId: options.refId || 'A',
           datasource: options.datasourceUid ? { uid: options.datasourceUid } : undefined,
         };
-        const result = delegate.applyTemplateVariables(fullQuery, scopedVars, options.filters);
+        const result = this._applyTargetTemplateVariables(delegate, fullQuery, scopedVars, options.filters);
         if (isPlainObject(result)) {
           return {
             query: this._stripReservedTargetQueryFields(result),
