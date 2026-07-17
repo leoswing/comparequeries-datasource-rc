@@ -1,7 +1,46 @@
+import type { AdHocVariableFilter } from '@grafana/data';
+
 import { DataSource } from './datasource';
 
 const mockGetDataSourceSrv = jest.fn();
 const mockGetTemplateSrv = jest.fn();
+
+function createTemplateReplace(moduleValue: string | string[] = ['action', 'default', 'charge']) {
+  return (
+    input: string,
+    _scopedVars?: unknown,
+    formatter?: (
+      value: unknown,
+      variable: unknown,
+      formatVariableValue: (value: unknown, format?: string) => string
+    ) => string
+  ): string => {
+    const formatVariableValue = (value: unknown, format?: string): string => {
+      const values = Array.isArray(value) ? value.map(String) : [String(value)];
+      switch (format) {
+        case 'csv':
+          return values.join(',');
+        case 'lucene':
+          return values.length > 1 ? `(${values.map((item) => `"${item}"`).join(' OR ')})` : values[0];
+        case 'regex':
+          return values.length > 1 ? `(${values.join('|')})` : values[0];
+        case 'pipe':
+          return values.join('|');
+        case 'sqlstring':
+          return values.map((item) => `'${item}'`).join(',');
+        default:
+          return values.length > 1 ? `{${values.join(',')}}` : values[0];
+      }
+    };
+    const replacement = typeof formatter === 'function'
+      ? formatter(moduleValue, { name: 'moduleName', multi: Array.isArray(moduleValue) }, formatVariableValue)
+      : formatVariableValue(moduleValue);
+
+    return input
+      .replace(/\$\{moduleName:glob\}/g, formatVariableValue(moduleValue))
+      .replace(/\$moduleName/g, replacement);
+  };
+}
 
 jest.mock('@grafana/runtime', () => ({
   getDataSourceSrv: () => mockGetDataSourceSrv(),
@@ -140,6 +179,869 @@ describe('DataSource', () => {
       expect(result.data[0].target).toBe('error_1d');
     });
 
+    it('delegates variable interpolation on the first frontend query', async () => {
+      const queryMock = jest.fn().mockResolvedValue({
+        data: [{ target: 'metric' }],
+      });
+      const applyTemplateVariables = jest.fn((query: Record<string, unknown>) => ({
+        ...query,
+        expr: 'up{job=~"(api|worker)"}',
+      }));
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn().mockResolvedValue({
+          meta: { id: 'prometheus' },
+          query: queryMock,
+          applyTemplateVariables,
+        }),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      await (ds as any)._runSelfContained(
+        {
+          requestId: 'req-first-run',
+          range: {
+            from: new Date(0),
+            to: new Date(1),
+            raw: {},
+          },
+          scopedVars: {
+            job: { value: ['api', 'worker'], text: 'api + worker' },
+          },
+        },
+        {
+          refId: 'A',
+          datasourceUid: 'prom-uid',
+          targetQueryJSON: { expr: 'up{job=~"$job"}' },
+          timeShifts: [{ id: 0, value: '' }],
+        }
+      );
+
+      expect(applyTemplateVariables).toHaveBeenCalledTimes(1);
+      expect(queryMock.mock.calls[0][0].targets[0].expr).toBe('up{job=~"(api|worker)"}');
+    });
+
+    it('does not delegate twice after expression preparation', async () => {
+      const queryMock = jest.fn().mockResolvedValue({
+        data: [{ target: 'metric' }],
+      });
+      const applyTemplateVariables = jest.fn((query: Record<string, unknown>) => ({
+        ...query,
+        expr: 'up{job=~"(api|worker)"}',
+      }));
+      const targetDs = {
+        meta: { id: 'prometheus' },
+        query: queryMock,
+        applyTemplateVariables,
+      };
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn().mockResolvedValue(targetDs),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      ds.registerTargetDatasource('prom-uid', targetDs);
+
+      const filters = [{ key: 'cluster', operator: '=', value: 'prod' }];
+      const [prepared] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [{ id: 0, value: '' }],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'prom-uid',
+          targetQueryJSON: { expr: 'up{job=~"$job"}' },
+        }],
+        { job: { value: ['api', 'worker'], text: 'api + worker' } },
+        filters
+      );
+
+      await (ds as any)._runSelfContained(
+        {
+          requestId: 'req-prepared',
+          range: {
+            from: new Date(0),
+            to: new Date(1),
+            raw: {},
+          },
+          scopedVars: {
+            job: { value: ['api', 'worker'], text: 'api + worker' },
+          },
+          filters,
+        },
+        prepared
+      );
+
+      expect(applyTemplateVariables).toHaveBeenCalledTimes(1);
+      expect(queryMock.mock.calls[0][0].targets[0].expr).toBe('up{job=~"(api|worker)"}');
+    });
+
+    it('applyTemplateVariables expands nested targetQueryJSON for backend queries', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) =>
+          value.replace(/\$moduleName/g, 'basic-product').replace(/\$environment/g, 'production'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const query = {
+        refId: 'B',
+        query: '',
+        timeShifts: [{ id: 0, value: '1d' }],
+        aliasTypes: [],
+        units: [],
+        process: true,
+        targetQueryJSON: {
+          query: 'type:log AND moduleName: $moduleName',
+          nested: {
+            environment: '$environment',
+            values: ['$moduleName', 1, true],
+          },
+        },
+      };
+      const scopedVars = {
+        moduleName: { value: 'basic-product', text: 'basic-product' },
+        environment: { value: 'production', text: 'production' },
+      };
+      const result = ds.applyTemplateVariables(query, scopedVars);
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'type:log AND moduleName: basic-product',
+        nested: {
+          environment: 'production',
+          values: ['basic-product', 1, true],
+        },
+      });
+      expect(query.targetQueryJSON).toEqual({
+        query: 'type:log AND moduleName: $moduleName',
+        nested: {
+          environment: '$environment',
+          values: ['$moduleName', 1, true],
+        },
+      });
+    });
+
+    it('bridges legacy Ad Hoc filters without mutating the target datasource', () => {
+      const legacyFilters = [{ key: 'moduleName', operator: '=', value: 'basic-product' }];
+      const getAdhocFilters = jest.fn().mockReturnValue(legacyFilters);
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) => value,
+        getAdhocFilters,
+      });
+      const targetGetAdhocFilters = jest.fn().mockReturnValue([]);
+      const targetTemplateSrv = {
+        getAdhocFilters: targetGetAdhocFilters,
+      };
+      const legacyTargetDs = {
+        name: 'Elasticsearch',
+        templateSrv: targetTemplateSrv,
+        applyTemplateVariables(query: Record<string, unknown>, _scopedVars: unknown) {
+          const filters = this.templateSrv.getAdhocFilters(this.name);
+          const filterQuery = filters.map((filter: AdHocVariableFilter) => `${filter.key}:\"${filter.value}\"`).join(' AND ');
+          return {
+            ...query,
+            query: [query.query, filterQuery].filter(Boolean).join(' AND '),
+          };
+        },
+      };
+      const ds = new DataSource({
+        id: 1,
+        uid: 'comparequeries-uid',
+        name: 'CompareQueries',
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      ds.registerTargetDatasource('es-uid', legacyTargetDs);
+
+      const result = ds.applyTemplateVariables(
+        {
+          refId: 'B',
+          datasourceUid: 'es-uid',
+          targetQueryJSON: { query: 'type: log' },
+        } as any,
+        {}
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'type: log AND moduleName:"basic-product"',
+      });
+      expect(getAdhocFilters).toHaveBeenCalledWith('CompareQueries');
+      expect(targetGetAdhocFilters).not.toHaveBeenCalled();
+      expect(legacyTargetDs.templateSrv).toBe(targetTemplateSrv);
+    });
+
+    it('keeps an explicitly empty modern filter list authoritative', () => {
+      const getAdhocFilters = jest.fn().mockReturnValue([
+        { key: 'moduleName', operator: '=', value: 'stale-value' },
+      ]);
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) => value,
+        getAdhocFilters,
+      });
+      const applyTemplateVariables = jest.fn(
+        (query: Record<string, unknown>, _scopedVars?: unknown, _filters?: unknown) => query
+      );
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      ds.registerTargetDatasource('es-uid', { applyTemplateVariables });
+
+      ds.applyTemplateVariables(
+        {
+          refId: 'B',
+          datasourceUid: 'es-uid',
+          targetQueryJSON: { query: 'type: log' },
+        } as any,
+        {},
+        []
+      );
+
+      expect(getAdhocFilters).not.toHaveBeenCalled();
+      expect(applyTemplateVariables.mock.calls[0][2]).toEqual([]);
+    });
+
+    it('delegates interpolation to target datasource when cached', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      // Simulate a cached target datasource that formats lucene-style
+      const applyTemplateVariables = jest.fn(
+        (query: Record<string, unknown>, _scopedVars?: unknown, _filters?: unknown) => ({
+          ...query,
+          query: 'moduleName: ("action" OR "default" OR "charge")',
+        })
+      );
+      const fakeTargetDs = {
+        applyTemplateVariables,
+      };
+      ds.registerTargetDatasource('es-uid', fakeTargetDs);
+      const filters = [{ key: 'environment', operator: '=', value: 'production' }];
+
+      const result = ds._interpolateTargetQueryJSON(
+        '{"query":"moduleName: $moduleName"}',
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } },
+        { datasourceUid: 'es-uid', refId: 'B', filters }
+      );
+
+      expect(result).toEqual({
+        query: 'moduleName: ("action" OR "default" OR "charge")',
+      });
+      expect(applyTemplateVariables.mock.calls[0][2]).toBe(filters);
+    });
+
+    it('delegates interpolation to a datasource already loaded by Grafana on cold start', () => {
+      const applyTemplateVariables = jest.fn((query: Record<string, unknown>) => ({
+        ...query,
+        query: 'type:log AND moduleName: ("action" OR "default" OR "charge")',
+      }));
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn(),
+        datasources: {
+          'es-uid': {
+            applyTemplateVariables,
+          },
+        },
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      const result = ds._interpolateTargetQueryJSON(
+        '{"query":"type:log AND moduleName: $moduleName"}',
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } },
+        { datasourceUid: 'es-uid', refId: 'B' }
+      );
+
+      expect(result).toEqual({
+        query: 'type:log AND moduleName: ("action" OR "default" OR "charge")',
+      });
+      expect(applyTemplateVariables).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses Grafana default formatting when target datasource is unavailable', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string, _scopedVars?: unknown, format?: string) =>
+          value.replace(/\$moduleName/g, format === undefined ? '{action,default,charge}' : 'unexpected'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const result = ds._interpolateTargetQueryJSON(
+        '{"query":"type:log AND moduleName: $moduleName"}',
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } },
+        { datasourceUid: 'unknown-uid', refId: 'B' }
+      );
+
+      expect(result).toEqual({
+        query: 'type:log AND moduleName: {action,default,charge}',
+      });
+    });
+
+    it('formats fallback glob groups as lucene for elasticsearch targets', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn(),
+        getInstanceSettings: jest.fn((uid: string) =>
+          uid === 'es-uid' ? { type: 'elasticsearch' } : undefined
+        ),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'es-uid',
+          targetQueryJSON: { query: 'moduleName: $moduleName' },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({ query: 'moduleName: ("action" OR "default" OR "charge")' });
+    });
+
+    it('recovers original scoped arrays when Grafana pre-joins formatter values', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (
+          input: string,
+          _scopedVars?: unknown,
+          formatter?: (value: unknown, variable: unknown) => string
+        ) => input.replace(
+          /\$moduleName/g,
+          formatter?.('action,default,charge', { name: 'moduleName', type: 'scopedvar' }) ?? ''
+        ),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceType: 'elasticsearch',
+          targetQueryJSON: { query: 'moduleName: $moduleName' },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({ query: 'moduleName: ("action" OR "default" OR "charge")' });
+    });
+
+    it('uses dashboard variable state when expression scopedVars omit the multi-value variable', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (
+          input: string,
+          _scopedVars?: unknown,
+          formatter?: (value: unknown, variable: unknown) => string
+        ) => input.replace(
+          /\$moduleName/g,
+          formatter?.(['action', 'default', 'charge'], { name: 'moduleName', multi: true }) ?? ''
+        ),
+      });
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn(),
+        getInstanceSettings: jest.fn((uid: string) =>
+          uid === 'es-uid' ? { type: 'elasticsearch' } : undefined
+        ),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'es-uid',
+          targetQueryJSON: { query: 'moduleName: $moduleName' },
+        }],
+        { __interval: { value: '30s', text: '30s' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({ query: 'moduleName: ("action" OR "default" OR "charge")' });
+    });
+
+    it('formats fallback glob groups as lucene for opensearch targets', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+      mockGetDataSourceSrv.mockReturnValue({
+        get: jest.fn(),
+        getInstanceSettings: jest.fn((uid: string) =>
+          uid === 'os-uid' ? { type: 'grafana-opensearch-datasource' } : undefined
+        ),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'os-uid',
+          targetQueryJSON: { query: 'moduleName: $moduleName' },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({ query: 'moduleName: ("action" OR "default" OR "charge")' });
+    });
+
+    it('uses default fallback when expressions prepare queries without a delegate', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) => value.replace(/\$moduleName/g, '{action,default,charge}'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'B',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'target-uid',
+          targetQueryJSON: { query: 'moduleName: $moduleName' },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({ query: 'moduleName: {action,default,charge}' });
+    });
+
+    it('keeps an explicit variable format authoritative over the datasource fallback', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'B',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'es-uid',
+          datasourceType: 'elasticsearch',
+          targetQueryJSON: { query: 'moduleName: ${moduleName:glob}' },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'moduleName: {action,default,charge}',
+      });
+    });
+
+    it('applies the datasource fallback only to query fields', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'B',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'es-uid',
+          datasourceType: 'elasticsearch',
+          targetQueryJSON: {
+            query: 'moduleName: $moduleName',
+            alias: '$moduleName',
+          },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'moduleName: ("action" OR "default" OR "charge")',
+        alias: '{action,default,charge}',
+      });
+    });
+
+    it.each(['prometheus', 'loki'])(
+      'formats unformatted multi-value variables as regex for %s expressions',
+      (datasourceType) => {
+        mockGetTemplateSrv.mockReturnValue({
+          replace: createTemplateReplace(),
+        });
+
+        const ds = new DataSource({
+          id: 1,
+          meta: { id: 'leoswing-comparequeries-datasource' },
+          jsonData: {},
+        } as any);
+
+        const [result] = ds.interpolateVariablesInQueries(
+          [{
+            refId: 'A',
+            query: '',
+            timeShifts: [],
+            aliasTypes: [],
+            units: [],
+            process: true,
+            datasourceUid: `${datasourceType}-uid`,
+            datasourceType,
+            targetQueryJSON: {
+              expr: 'errors_total{module=~"$moduleName"}',
+              legendFormat: '$moduleName',
+            },
+          }],
+          { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+        );
+
+        expect(result.targetQueryJSON).toEqual({
+          expr: 'errors_total{module=~"(action|default|charge)"}',
+          legendFormat: '{action,default,charge}',
+        });
+      }
+    );
+
+    it.each(['mysql', 'postgres', 'grafana-postgresql-datasource', 'mssql'])(
+      'formats unformatted multi-value variables as sqlstring for %s rawSql',
+      (datasourceType) => {
+        mockGetTemplateSrv.mockReturnValue({
+          replace: createTemplateReplace(),
+        });
+
+        const ds = new DataSource({
+          id: 1,
+          meta: { id: 'leoswing-comparequeries-datasource' },
+          jsonData: {},
+        } as any);
+
+        const [result] = ds.interpolateVariablesInQueries(
+          [{
+            refId: 'A',
+            query: '',
+            timeShifts: [],
+            aliasTypes: [],
+            units: [],
+            process: true,
+            datasourceUid: `${datasourceType}-uid`,
+            datasourceType,
+            targetQueryJSON: {
+              rawSql: 'SELECT * FROM events WHERE module_name IN ($moduleName)',
+            },
+          }],
+          { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+        );
+
+        expect(result.targetQueryJSON).toEqual({
+          rawSql: "SELECT * FROM events WHERE module_name IN ('action','default','charge')",
+        });
+      }
+    );
+
+    it('formats unformatted multi-value variables as csv for CSV query fields', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'csv-uid',
+          datasourceType: 'marcusolsson-csv-datasource',
+          targetQueryJSON: {
+            query: 'modules=$moduleName',
+          },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'modules=action,default,charge',
+      });
+    });
+
+    it('formats unformatted multi-value variables as regex for InfluxQL query fields', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'influx-uid',
+          datasourceType: 'influxdb',
+          targetQueryJSON: {
+            query: 'SELECT mean("value") FROM "logins" WHERE "hostname" =~ /^$moduleName$/',
+            alias: '$moduleName',
+          },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'SELECT mean("value") FROM "logins" WHERE "hostname" =~ /^(action|default|charge)$/',
+        alias: '{action,default,charge}',
+      });
+    });
+
+    it('formats unformatted multi-value variables as pipe for OpenTSDB filter fields', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'opentsdb-uid',
+          datasourceType: 'opentsdb',
+          targetQueryJSON: {
+            metric: 'sys.cpu.user',
+            filters: [
+              {
+                type: 'literal_or',
+                tagk: 'host',
+                filter: '$moduleName',
+              },
+            ],
+            alias: '$moduleName',
+          },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        metric: 'sys.cpu.user',
+        filters: [
+          {
+            type: 'literal_or',
+            tagk: 'host',
+            filter: 'action|default|charge',
+          },
+        ],
+        alias: '{action,default,charge}',
+      });
+    });
+
+    it('does not apply an adapter to a datasource type that only contains a known type name', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace(),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'custom-influx-uid',
+          datasourceType: 'custom-influx-wrapper-datasource',
+          targetQueryJSON: {
+            query: 'host=$moduleName',
+          },
+        }],
+        { moduleName: { value: ['action', 'default', 'charge'], text: 'action + default + charge' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        query: 'host={action,default,charge}',
+      });
+    });
+
+    it('does not apply fallback formats to single-value variables', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: createTemplateReplace('action'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const [result] = ds.interpolateVariablesInQueries(
+        [{
+          refId: 'A',
+          query: '',
+          timeShifts: [],
+          aliasTypes: [],
+          units: [],
+          process: true,
+          datasourceUid: 'mysql-uid',
+          datasourceType: 'mysql',
+          targetQueryJSON: {
+            rawSql: 'SELECT * FROM events WHERE module_name = $moduleName',
+          },
+        }],
+        { moduleName: { value: 'action', text: 'action' } }
+      );
+
+      expect(result.targetQueryJSON).toEqual({
+        rawSql: 'SELECT * FROM events WHERE module_name = action',
+      });
+    });
+
+    it('applyTemplateVariables expands timeShift value, alias, and delimiter', () => {
+      mockGetTemplateSrv.mockReturnValue({
+        replace: (value: string) =>
+          value
+            .replace(/\$shiftAlias/g, 'last_week')
+            .replace(/\$delimiter/g, ' / ')
+            .replace(/\$shift/g, '7d'),
+      });
+
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const query = {
+        refId: 'B',
+        query: '',
+        timeShifts: [
+          { id: 0, value: '', alias: '' },
+          { id: 1, value: '$shift', alias: '$shiftAlias', aliasType: 'suffix', delimiter: '$delimiter' },
+        ],
+        aliasTypes: [],
+        units: [],
+        process: true,
+      };
+      const scopedVars = {
+        shift: { value: '7d', text: '7d' },
+        shiftAlias: { value: 'last_week', text: 'last_week' },
+        delimiter: { value: ' / ', text: ' / ' },
+      };
+      const result = ds.applyTemplateVariables(query as any, scopedVars);
+
+      expect(result.timeShifts).toEqual([
+        { id: 0, value: '', alias: '', delimiter: '' },
+        { id: 1, value: '7d', alias: 'last_week', aliasType: 'suffix', delimiter: ' / ' },
+      ]);
+      expect(query.timeShifts[1]).toEqual({
+        id: 1,
+        value: '$shift',
+        alias: '$shiftAlias',
+        aliasType: 'suffix',
+        delimiter: '$delimiter',
+      });
+    });
+
     it('filters invalid non-empty shifts when at least one valid shift exists', async () => {
       const queryMock = jest.fn().mockResolvedValue({
         data: [{ target: 'error' }],
@@ -180,6 +1082,77 @@ describe('DataSource', () => {
       expect(queryMock).toHaveBeenCalledTimes(1);
       expect(result.data).toHaveLength(1);
       expect(result.data[0].target).toBe('error_1d');
+    });
+  });
+
+  describe('time-shift alias naming', () => {
+    it('keeps frame name separate from the aliased field name', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      const frame: any = {
+        name: 'test22',
+        fields: [
+          { name: 'Time', type: 'time', config: {} },
+          { name: 'Value', type: 'number', config: {} },
+        ],
+      };
+
+      (ds as any)._applyAliasToFrame(frame, '1d', 'suffix', '_');
+
+      expect(frame.name).toBe('test22');
+      expect(frame.fields[1].name).toBe('Value_1d');
+      expect(frame.fields[1].config.displayNameFromDS).toBe('test22_1d');
+      expect(frame.fields[1].labels).toEqual({ timeshift: '1d' });
+    });
+
+    it('keeps wide-frame field display names distinct', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      const frame: any = {
+        name: 'orders',
+        fields: [
+          { name: 'Time', type: 'time', config: {} },
+          { name: 'success', type: 'number', config: {} },
+          { name: 'failure', type: 'number', config: {} },
+        ],
+      };
+
+      (ds as any)._applyAliasToFrame(frame, '1d', 'suffix', '_');
+
+      expect(frame.fields[1].name).toBe('success_1d');
+      expect(frame.fields[2].name).toBe('failure_1d');
+      expect(frame.fields[1].config.displayNameFromDS).toBe('success_1d');
+      expect(frame.fields[2].config.displayNameFromDS).toBe('failure_1d');
+    });
+
+    it('keeps mixed-frame field display names distinct', () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+      const frame: any = {
+        name: 'orders',
+        fields: [
+          { name: 'Time', type: 'time', config: {} },
+          { name: 'status', type: 'string', config: {} },
+          { name: 'count', type: 'number', config: {} },
+        ],
+      };
+
+      (ds as any)._applyAliasToFrame(frame, '1d', 'suffix', '_');
+
+      expect(frame.fields[1].name).toBe('status_1d');
+      expect(frame.fields[1].config.displayNameFromDS).toBe('status_1d');
+      expect(frame.fields[2].name).toBe('count_1d');
+      expect(frame.fields[2].config.displayNameFromDS).toBe('count_1d');
     });
   });
 
@@ -251,6 +1224,21 @@ describe('DataSource', () => {
 
       expect(datasourceSrv.get).toHaveBeenCalledWith('prometheus-uid');
       expect(compareQueryMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('ad hoc variable support', () => {
+    it('exposes getTagKeys/getTagValues so Grafana can bind Ad hoc variables', async () => {
+      const ds = new DataSource({
+        id: 1,
+        meta: { id: 'leoswing-comparequeries-datasource' },
+        jsonData: {},
+      } as any);
+
+      expect(typeof ds.getTagKeys).toBe('function');
+      expect(typeof ds.getTagValues).toBe('function');
+      await expect(ds.getTagKeys()).resolves.toEqual([]);
+      await expect(ds.getTagValues({ key: 'moduleName' } as any)).resolves.toEqual([]);
     });
   });
 });
