@@ -103,6 +103,9 @@ func (d *Datasource) handleQuery(ctx context.Context, client *GrafanaClient, q b
 		return backend.ErrDataResponse(backend.StatusBadRequest, "at least one time shift is required")
 	}
 
+	// Treat targetQueryJSON as an opaque target-datasource payload. CompareQueries cannot
+	// distinguish unresolved dashboard variables from datasource-specific macros, so the
+	// target datasource remains responsible for interpolation and validation.
 	var allFrames data.Frames
 
 	for _, ts := range qm.TimeShifts {
@@ -257,9 +260,12 @@ func (d *Datasource) filterFrameByRange(frame *data.Frame, from, to time.Time) {
 	}
 }
 
-// applyAlias renames numeric field names/display names to include the time shift alias,
-// and injects a "timeshift" label so Grafana Alerting can distinguish series during union.
+// applyAlias aliases field-level names while keeping frame.Name unchanged.
+// DisplayNameFromDS prevents Grafana from appending frame and timeshift labels again.
+// The "timeshift" label lets Grafana Alerting distinguish series during union.
 func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter string) {
+	singleField := singleSeriesField(frame)
+
 	for _, field := range frame.Fields {
 		if field.Type() == data.FieldTypeTime || field.Type() == data.FieldTypeNullableTime {
 			continue
@@ -267,13 +273,18 @@ func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter s
 
 		field.Name = generalAlias(field.Name, alias, aliasType, delimiter)
 
-		if field.Config != nil {
-			if field.Config.DisplayName != "" {
-				field.Config.DisplayName = generalAlias(field.Config.DisplayName, alias, aliasType, delimiter)
-			}
-			if field.Config.DisplayNameFromDS != "" {
-				field.Config.DisplayNameFromDS = generalAlias(field.Config.DisplayNameFromDS, alias, aliasType, delimiter)
-			}
+		if field.Config == nil {
+			field.Config = &data.FieldConfig{}
+		}
+		if field.Config.DisplayName != "" {
+			field.Config.DisplayName = generalAlias(field.Config.DisplayName, alias, aliasType, delimiter)
+		}
+		if field.Config.DisplayNameFromDS != "" {
+			field.Config.DisplayNameFromDS = generalAlias(field.Config.DisplayNameFromDS, alias, aliasType, delimiter)
+		} else if field == singleField && frame.Name != "" {
+			field.Config.DisplayNameFromDS = generalAlias(frame.Name, alias, aliasType, delimiter)
+		} else {
+			field.Config.DisplayNameFromDS = field.Name
 		}
 
 		// Inject timeshift label so Grafana Alerting union can distinguish series from
@@ -283,6 +294,20 @@ func (d *Datasource) applyAlias(frame *data.Frame, alias, aliasType, delimiter s
 		}
 		field.Labels["timeshift"] = alias
 	}
+}
+
+func singleSeriesField(frame *data.Frame) *data.Field {
+	var result *data.Field
+	for _, field := range frame.Fields {
+		if field.Type() == data.FieldTypeTime || field.Type() == data.FieldTypeNullableTime {
+			continue
+		}
+		if result != nil {
+			return nil
+		}
+		result = field
+	}
+	return result
 }
 
 func generalAlias(original, alias, aliasType, delimiter string) string {

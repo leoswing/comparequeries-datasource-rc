@@ -11,6 +11,8 @@ Key features:
 - Resolves issues with undefined data points
 - Introduces support for timeShift aliases
 - Supports Grafana Alerting through backend execution
+- Delegates dashboard variables and Ad Hoc filters to target datasources
+- Supports Math expressions with multi-value variables (v2.1.0+)
 
 ![Plugin-snapshot](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/src/img/compare-func.png)
 
@@ -42,6 +44,25 @@ Step 6. Pick `Target Datasource` inside CompareQueries, build target query inlin
 
 ![Screenshot-plugin-usage-mixed](https://raw.githubusercontent.com/leoswing/comparequeries-datasource-rc/main/img/plugin-usage-mixed.png)
 
+# Dashboard variables & Ad Hoc filters
+
+CompareQueries delegates variable and Ad Hoc filter formatting to the **target datasource** (Elasticsearch, Prometheus, SQL, etc.). It does not maintain per-datasource multi-value syntax rules.
+
+- **Panel / Math expression / Alerting**: `targetQueryJSON` is interpolated via the target plugin's `applyTemplateVariables` when available.
+- **Multi-value variables**: formatted by the target (e.g. Elasticsearch → `("a" OR "b" OR "c")`), not CompareQueries' glob fallback `{a,b,c}`.
+- **Ad Hoc filters**: select **CompareQueries** as the variable datasource, enable **Use static key dimensions**, and enter fields as `label,fieldName` (for example, `moduleName,moduleName`). Enable **Allow custom values** only when users need to type values in the Grafana UI.
+- **URL filters**: pass one `var-filter` parameter per filter, for example `var-filter=moduleName%7C%3D%7Caction`. URL filters do not require **Allow custom values**.
+- **Verify**: open Query inspector and check that the final target query includes the selected filters.
+
+# Mathematical expressions (2.1.0+)
+
+Use with Grafana [Math expressions](https://grafana.com/docs/grafana/latest/panels-visualizations/query-transform-data/expression-queries/) in a `-- Mixed --` panel: base query + CompareQueries shifted query + Expression row.
+
+- Enable **Basic authentication** + **Service Account token** on the CompareQueries datasource when backend expression execution requires auth.
+- Enable **Process TimeShift** when the expression must align shifted series on the same time axis.
+
+Details: [Wiki — Mathematical Expressions](https://github.com/leoswing/comparequeries-datasource-rc/wiki/Mathematical-Expressions).
+
 # Legacy RefId usage (Grafana < 13 existing dashboards only)
 
 Use this only if you are on Grafana versions below 13 and already have dashboards using the old CompareQueries RefId workflow.
@@ -57,6 +78,7 @@ For Grafana 13+, use Step 4 recommended flow instead: select `Target Datasource`
 Alerting uses backend execution. Alert rules do not use the panel `-- Mixed --` datasource flow.
 Configure CompareQueries directly with `Target Datasource`, `Time shift`, and query inline.
 
+- The backend treats `targetQueryJSON` as an opaque target-datasource payload. Any remaining variables or datasource-specific macros are forwarded for the target datasource to validate.
 - Default datasource auth mode is `No Authentication`.
 - If backend or alerting requests fail authentication, switch to `Basic authentication`.
 - In `Basic authentication`, configure `Service Account` token and (optionally) `Grafana URL`.

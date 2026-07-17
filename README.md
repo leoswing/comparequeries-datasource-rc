@@ -84,6 +84,29 @@ Use CompareQueries with Grafana [Math expressions](https://grafana.com/docs/graf
 
 Step-by-step setup, SQL/MySQL wide-series notes, and troubleshooting: **[Wiki — Mathematical Expressions](https://github.com/leoswing/comparequeries-datasource-rc/wiki/Mathematical-Expressions)**.
 
+## Dashboard Variables & Ad Hoc Filters
+
+Dashboard variables work in target queries and Math expressions. Multi-value selections are formatted for supported target datasources, including Elasticsearch, OpenSearch, Prometheus, Loki, InfluxQL, OpenTSDB, and SQL datasources.
+
+Explicit [Grafana variable formats](https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/) such as `${moduleName:raw}` remain authoritative.
+
+**Ad Hoc filters (Filter and Group by)**
+
+1. Create an **Ad hoc filters** variable and select **CompareQueries** as its datasource.
+2. Enable **Use static key dimensions**, then enter the fields users can filter by. Use one field per line in `Display label,fieldName` format:
+
+   ```text
+   moduleName,moduleName
+   type,type
+   plugin,plugin
+   ```
+
+   The first column is the label shown in Grafana; the second is the actual field name.
+3. To type filter values in the Grafana UI, enable **Allow custom values**.
+4. To set filters from a dashboard URL, add one `var-filter` parameter per filter. Example: `var-filter=moduleName%7C%3D%7Caction` represents `moduleName = action`. URL filters do not require **Allow custom values**.
+
+CompareQueries does not provide automatic field or value suggestions, so configure static fields and enter values manually. To confirm a filter is active, open **Query inspector** and check that the final target query includes the selected condition.
+
 ## Datasource Settings
 
 Configure the CompareQueries datasource in **Connections -> Data sources**.

@@ -71,7 +71,7 @@ function stripReservedFields(payload: Record<string, any>): Record<string, any> 
   return out;
 }
 
-export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
+export function QueryEditor({ query, onChange, onRunQuery, data, datasource }: Props) {
   const lastRunValueRef = useRef<Record<string, any> | null>(null);
 
   const aliasTypes = ['suffix', 'prefix', 'absolute'];
@@ -265,7 +265,8 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
   const [targetDsError, setTargetDsError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!target.datasourceUid) {
+    const datasourceUid = target.datasourceUid;
+    if (!datasourceUid) {
       setTargetDs(null);
       setTargetDsError(null);
       setTargetDsLoading(false);
@@ -277,28 +278,30 @@ export function QueryEditor({ query, onChange, onRunQuery, data }: Props) {
     setTargetDsError(null);
 
     getDataSourceSrv()
-      .get({ uid: target.datasourceUid })
+      .get({ uid: datasourceUid })
       .then((ds) => {
         if (cancelled) {
           return;
         }
-        setTargetDs(ds as unknown as DataSourceApi);
+        datasource.registerTargetDatasource(datasourceUid, ds);
+        setTargetDs(ds);
         setTargetDsLoading(false);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (cancelled) {
           return;
         }
         console.warn('CompareQueries: failed to load target datasource', err);
         setTargetDs(null);
-        setTargetDsError(err?.message ?? String(err));
+        const message = err instanceof Error && err.message ? err.message : String(err);
+        setTargetDsError(message);
         setTargetDsLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [target.datasourceUid]);
+  }, [target.datasourceUid, datasource]);
 
   // Resolve the embedded editor component contributed by the target datasource plugin.
   // Every standard Grafana datasource plugin exposes this (Prometheus, Elasticsearch, Loki, SQL,
