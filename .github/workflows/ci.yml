@@ -47,7 +47,7 @@ jobs:
           cache: true
 
       - name: Install Mage
-        run: go install github.com/magefile/mage@v1.17.1
+        run: go install github.com/magefile/mage@v1.17.2
 
       - name: Build backend
         run: mage
