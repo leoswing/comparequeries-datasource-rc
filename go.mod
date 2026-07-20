@@ -1,8 +1,8 @@
 module github.com/leoswing/comparequeries-datasource-rc
 
-go 1.26.5
+go 1.26.4
 
-require github.com/grafana/grafana-plugin-sdk-go v0.293.0
+require github.com/grafana/grafana-plugin-sdk-go v0.292.0
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect

@@ -21,7 +21,7 @@ jobs:
         with:
           policy_token: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
           attestation: true
-          go-version: "1.26.5"
+          go-version: "1.26.4"
           node-version: "20"
           use_changelog_generator: false
           token: ${{ secrets.CHANGELOG_PAT }}
