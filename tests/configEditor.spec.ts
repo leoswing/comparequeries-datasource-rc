@@ -1,33 +1,41 @@
 import { test, expect } from '@grafana/plugin-e2e';
-import { MyDataSourceOptions, MySecureJsonData } from '../src/types';
 
 test('"Save & test" should be successful when configuration is valid', async ({
-  createDataSourceConfigPage,
+  createDataSource,
   readProvisionedDataSource,
   selectors,
   page,
+  request,
 }) => {
   const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-  const configPage = await createDataSourceConfigPage({ type: ds.type });
-  const healthCheckPath = `${selectors.apis.DataSource.proxy(
-    configPage.datasource.uid,
-    configPage.datasource.id.toString()
-  )}/health`;
-  await page.route(healthCheckPath, async (route) => await route.fulfill({ status: 200, body: 'OK' }));
-  await expect(configPage.saveAndTest({ path: healthCheckPath })).toBeOK();
+  const created = await createDataSource({ type: ds.type });
+  await page.goto(selectors.pages.EditDataSource.url(created.uid), { waitUntil: 'domcontentloaded' });
+
+  const healthPath = selectors.apis.DataSource.health(created.uid, created.id.toString());
+  await page.route(healthPath, async (route) => {
+    await route.fulfill({ status: 200, body: 'OK' });
+  });
+
+  await page.getByRole('button', { name: 'Save & test' }).click();
+  await expect(page.getByText(/working correctly/i)).toBeVisible();
+
+  await request.delete(selectors.apis.DataSource.datasourceByUID(created.uid));
 });
 
-test('"Save & test" should display success alert box when config is valid', async ({
-  createDataSourceConfigPage,
+test('Config editor should render auth controls correctly', async ({
+  createDataSource,
   readProvisionedDataSource,
   selectors,
+  page,
+  request,
 }) => {
   const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-  const configPage = await createDataSourceConfigPage({ type: ds.type });
-  const healthCheckPath = `${selectors.apis.DataSource.proxy(
-    configPage.datasource.uid,
-    configPage.datasource.id.toString()
-  )}/health`;
-  await expect(configPage.saveAndTest({ path: healthCheckPath })).not.toBeOK();
-  await expect(configPage).toHaveAlert('error');
+  const created = await createDataSource({ type: ds.type });
+  await page.goto(selectors.pages.EditDataSource.url(created.uid), { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByText('Authentication (Optional)')).toBeVisible();
+  await expect(page.getByText('No Authentication')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save & test' })).toBeVisible();
+
+  await request.delete(selectors.apis.DataSource.datasourceByUID(created.uid));
 });

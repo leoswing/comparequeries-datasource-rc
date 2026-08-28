@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.2.1](https://github.com/leoswing/comparequeries-datasource-rc/tree/v2.2.1) (2026-08-28)
+
+[Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/v2.2.0...v2.2.1)
+
+- chore: bump Go toolchain to 1.26.6.
+- chore: upgrade `google.golang.org/grpc` to v1.82.1.
+- chore: tighten npm dependency overrides for security scanning.
+
 ## [v2.1.1](https://github.com/leoswing/comparequeries-datasource-rc/tree/v2.1.1) (2026-05-25)
 
 [Full Changelog](https://github.com/leoswing/comparequeries-datasource-rc/compare/v2.1.0...v2.1.1)
