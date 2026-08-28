@@ -1,6 +1,6 @@
 {
   "name": "leoswing-comparequeries-datasource",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Grafana plugin for compare queries",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
@@ -20,7 +20,7 @@
   "author": "Mit",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@babel/core": "^7.21.4",
+    "@babel/core": "^7.29.6",
     "@grafana/eslint-config": "^7.0.0",
     "@grafana/plugin-e2e": "1.2.0",
     "@grafana/tsconfig": "^1.2.0-rc1",
@@ -77,11 +77,22 @@
   "packageManager": "npm@8.19.3",
   "overrides": {
     "minimatch": "^9.0.8",
-    "dompurify": "^3.4.2",
+    "dompurify": "^3.4.13",
     "lodash": "^4.18.1",
-    "immutable": "^5.1.5",
+    "immutable": "^5.1.8",
     "uuid": "^11.1.1",
     "websocket-driver": "^0.7.5",
-    "ws": "^8.21.1"
+    "ws": "^8.21.1",
+    "@opentelemetry/core": "^2.8.0",
+    "@remix-run/router": "^1.23.3",
+    "brace-expansion": "^2.1.4",
+    "fast-uri": "^3.1.5",
+    "js-cookie": "^3.0.7",
+    "js-yaml": "^4.3.1",
+    "nanoid": "^3.3.18",
+    "postcss": "^8.5.23",
+    "protobufjs": "^7.6.5",
+    "qs": "^6.15.2",
+    "react-router": "^6.30.4"
   }
 }
